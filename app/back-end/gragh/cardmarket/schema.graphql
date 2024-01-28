@@ -1,0 +1,44 @@
+type CancelOrder @entity(immutable: true) {
+  id: Bytes!
+  seller: Bytes! # address
+  busName: String! # string
+  tokenId: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type ChangePrice @entity(immutable: true) {
+  id: Bytes!
+  seller: Bytes! # address
+  busName: String! # string
+  tokenId: BigInt! # uint256
+  previousPrice: BigInt! # uint256
+  price: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Deal @entity(immutable: true) {
+  id: Bytes!
+  buyer: Bytes! # address
+  seller: Bytes! # address
+  busName: String! # string
+  tokenId: BigInt! # uint256
+  price: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type NewOrder @entity(immutable: true) {
+  id: Bytes!
+  seller: Bytes! # address
+  busName: String! # string
+  tokenId: BigInt! # uint256
+  price: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

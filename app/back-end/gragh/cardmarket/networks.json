@@ -1,0 +1,8 @@
+{
+  "sepolia": {
+    "CardMarket": {
+      "address": "0xc7bFF4f511A4E1378198Ba16D949899b2602534F",
+      "startBlock": 5170805
+    }
+  }
+}
