@@ -6,6 +6,7 @@ import "./ICardsFactory.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -35,9 +36,10 @@ contract CardsFactory is ICardsFactory, Ownable {
     mapping(uint256 merchantId => uint256 nonce) internal seriesIdOfMerchantId;
     mapping(address account => mapping(uint256 merchantId => bool isMerchant)) public merchantMembership;
     mapping(uint256 merchantId => mapping(uint256 seriesId => SeriesStruct)) public seriesInfo;
-    mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public
-        price;
-    mapping(uint256 merchantId => uint256 earnedValue) merchantBalance;
+    mapping(address user => uint256 privateBalance) private userBalance;
+    mapping(uint256 merchantId => uint256 earnedValue) private merchantBalance;
+    // State Variable Deprecated: The function related to this variable has been banned because listing and delisting has been realized off-chain instead.
+    // mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public price;
 
     constructor(address _imple, address _tokenAddr) Ownable(msg.sender) {
         implementationAddress = _imple;
@@ -54,7 +56,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
     modifier onlyCardOwner(uint256 merchantId, uint256 seriesId, uint256 tokenId) {
         address contractAddr = getCardSeriesAddress(merchantId, seriesId);
-        address cardOwner = ICardSeries(contractAddr).ownerOf(tokenId);
+        address cardOwner = IERC721(contractAddr).ownerOf(tokenId);
         if (msg.sender != cardOwner) {
             revert notCardOwner(msg.sender, merchantId, seriesId, tokenId);
         }
@@ -94,6 +96,13 @@ contract CardsFactory is ICardsFactory, Ownable {
         emit cardSeriesDeployed(_merchantId, _seriesId, clonedImpleInstance);
     }
 
+    /**
+     * @notice Users can list their card by calling {list} so that their card can be bought by other users.
+     *
+     * Emits a {cardListed} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function list(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId, uint256 _price) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
     //     _checkCardSeries(_merchantId, _seriesId);
     //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
@@ -101,6 +110,13 @@ contract CardsFactory is ICardsFactory, Ownable {
     //     emit cardListed(_merchantId, _seriesId, _tokenId, _price);
     // }
 
+    /**
+     * @notice Users can delist their card from the status of selling by calling {delist}.
+     *
+     * Emits a {cardDelisted} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
     //     _checkCardSeries(_merchantId, _seriesId);
     //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
@@ -163,6 +179,23 @@ contract CardsFactory is ICardsFactory, Ownable {
     }
 
     /**
+     * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
+     *
+     * Emits a {userWithdrawal} event.
+     *
+     * @param _amount the amount of tokens withdrawn from the private balance of `msg.sender`
+     */
+    function userWithdraw(uint256 _amount) public {
+        if (_amount > getUserBalance()) {
+            revert insufficientUserBalance(msg.sender, _amount, getUserBalance());
+        }
+        bool _success = IERC20(tokenAddress).transfer(msg.sender, _amount);
+        require(_success, "private withdrawal failed");
+        userBalance[msg.sender] -= _amount;
+        emit userWithdrawal(msg.sender, _amount);
+    }
+
+    /**
      * @notice a merchant can call {merchantWithdraw} to withdraw their token balance.
      *
      * Emits a {merchantWithdrawal} event.
@@ -171,10 +204,10 @@ contract CardsFactory is ICardsFactory, Ownable {
      */
     function merchantWithdraw(uint256 _merchantId, uint256 _amount) public onlyMerchant(_merchantId) {
         if (_amount > getMerchantBalance(_merchantId)) {
-            revert insufficientBalance(_merchantId, _amount, getMerchantBalance(_merchantId));
+            revert insufficientMerchantBalance(_merchantId, _amount, getMerchantBalance(_merchantId));
         }
         bool _success = IERC20(tokenAddress).transfer(msg.sender, _amount);
-        require(_success, "withdrawal failed");
+        require(_success, "merchant withdrawal failed");
         merchantBalance[_merchantId] -= _amount;
         emit merchantWithdrawal(_merchantId, msg.sender, _amount);
     }
@@ -264,6 +297,13 @@ contract CardsFactory is ICardsFactory, Ownable {
     }
 
     /**
+     * @dev Get the private balance of `msg.sender` in {CardFactory}.
+     */
+    function getUserBalance() public view returns (uint256) {
+        return userBalance[msg.sender];
+    }
+
+    /**
      * @dev Get the amount of profit(count in tokens) of the given `merchantId` currently stored in its account.
      */
     function getMerchantBalance(uint256 _merchantId) public view onlyMerchant(_merchantId) returns (uint256) {
@@ -304,19 +344,23 @@ contract CardsFactory is ICardsFactory, Ownable {
     }
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     *
      * @notice Get the current price of the card listed for sale.
      */
-    function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
-        _checkCardSeries(_merchantId, _seriesId);
-        return price[_merchantId][_seriesId][_tokenId];
-    }
+    // function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     return price[_merchantId][_seriesId][_tokenId];
+    // }
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     * 
      * @notice Query the status of the card according to the given parameters.
      */
-    function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (bool) {
-        _checkCardSeries(_merchantId, _seriesId);
-        bool isListed = price[_merchantId][_seriesId][_tokenId] != 0 ? true : false;
-        return isListed;
-    }
+    // function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (bool) {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     bool isListed = price[_merchantId][_seriesId][_tokenId] != 0 ? true : false;
+    //     return isListed;
+    // }
 }

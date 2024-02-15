@@ -41,6 +41,14 @@ interface ICardSeries {
      * @dev Indicates a failure when any account(address) calls {approve}.
      */
     error externalApproveBanned();
+    
+    /**
+     * @dev Because the constructor does not work when this contract is deployed via minimal proxy, this function will initialize 
+     * the state variables of itself and its parent contract(s).
+     *
+     * Note that {init} should only be called once at the moment of the deployment of this contract.
+     */
+    function init(address _factoryAddr, uint256 _merchantId, uint256 _seriesId, string calldata _seriesName, string calldata _seriesSymbol, uint256 _maxSupply) external;
 
     /**
      * @notice Merchant mints a new card to `_to` with an originally stored value(count in token).
@@ -85,7 +93,7 @@ interface ICardSeries {
      *
      * Note that any cards should keep their approval to `factory` at any time.
      */
-    function approve(address to, uint256 tokenId) external;
+    function approve(address to, uint256 tokenId) external pure;
 
     /**
      * @notice Get the `merchantId` of the current card series.

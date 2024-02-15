@@ -1,4 +1,4 @@
-# “会员卡”相关技术实现与说明
+# “会员卡”的技术实现与说明
 
 ## A. 概念解释与说明
 
@@ -73,6 +73,14 @@ interface ICardSeries {
      * @dev Indicates a failure when any account(address) calls {approve}.
      */
     error externalApproveBanned();
+    
+    /**
+     * @dev Because the constructor does not work when this contract is deployed via minimal proxy, this function will initialize 
+     * the state variables of itself and its parent contract(s).
+     *
+     * Note that {init} should only be called once at the moment of the deployment of this contract.
+     */
+    function init(address _factoryAddr, uint256 _merchantId, uint256 _seriesId, string calldata _seriesName, string calldata _seriesSymbol, uint256 _maxSupply) external;
 
     /**
      * @notice Merchant mints a new card to `_to` with an originally stored value(count in token).
@@ -117,7 +125,7 @@ interface ICardSeries {
      *
      * Note that any cards should keep their approval to `factory` at any time.
      */
-    function approve(address to, uint256 tokenId) external;
+    function approve(address to, uint256 tokenId) external pure;
 
     /**
      * @notice Get the `merchantId` of the current card series.
@@ -149,7 +157,6 @@ interface ICardSeries {
      */
     function getCardBalance(uint256 _tokenId) external view returns (uint256);
 }
-
 ```
 
 
@@ -161,6 +168,7 @@ interface ICardSeries {
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./ICardSeries.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -297,7 +305,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
      *
      * Note that any cards should keep their approval to `factory` at any time.
      */
-    function approve(address to, uint256 tokenId) public override {
+    function approve(address to, uint256 tokenId) public pure override(ICardSeries, ERC721, IERC721) {
         revert externalApproveBanned();
     }
 
@@ -380,10 +388,12 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 
 ```solidity
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";	// 实现 ERC721 的存储功能
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";                      // 实现 ERC721 的外部接口
 import "./ICardSeries.sol";    																									// 实现会员卡基本功能的接口
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";								// 实现自增数的方法
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";  		// 实现从签名到地址的计算方法
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";													 // 实现 EIP712 的签名格式
+// 实现 EIP712 的签名格式
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";				  // 实现生成 MerkleProof 的方法
 
 // 实现 ERC721 标准（ERC721URIStorage合约）
@@ -584,8 +594,8 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces {
 		// 其他逻辑...
 	
-	// 方法：禁用外部方法`approve`(所有`tokenId`对应的会员卡须全程授权给`factory`地址)
-		function approve(address to, uint256 tokenId) public override {
+		// 方法：禁用外部方法`approve`(所有`tokenId`对应的会员卡须全程授权给`factory`地址)
+		function approve(address to, uint256 tokenId) public pure override(ICardSeries, ERC721, IERC721) {
         revert externalApproveBanned();
     }
                 
@@ -685,13 +695,22 @@ interface ICardsFactory {
 
     /**
      * @dev Emitted when a card is listed for sale.
+     *
+     * Event Deprecated: The functions which can emit this event are banned because listing and delisting will be realized off-chain.
      */
     // event cardListed(uint256 indexed merchantId, uint256 indexed seriesId, uint256 indexed tokenId, uint256 price);
 
     /**
      * @dev Emitted when a card is delisted from the selling status.
+     *
+     * Event Deprecated: The functions which can emit this event are banned because listing and delisting will be realized off-chain.
      */
     // event cardDelisted(uint256 merchantId, uint256 seriesId, uint256 tokenId);
+
+    /**
+     * @dev Emitted when a user withdraw its balance by calling {userWithdraw}.
+     */
+    event userWithdrawal(address user, uint256 withdrawnValue);
 
     /**
      * @dev Emitted when a member of a specific merchant withdraw the balance of the merchant by calling {merchantWithdraw}.
@@ -704,9 +723,14 @@ interface ICardsFactory {
     error notMerchantOfGivenId(uint256 merchantId, address caller);
 
     /**
+     * @dev Indicates a failure with `user`, the amount of `withdrawal` and the current balance of the merchant `balance`. Used in withdrawing from `userBalance` by a user.
+     */
+    error insufficientUserBalance(address user, uint256 withdrawal, uint256 balance);
+
+    /**
      * @dev Indicates a failure with `merchantId`, the amount of `withdrawal` and the current balance of the merchant `balance`. Used in withdrawal by a merchant member.
      */
-    error insufficientBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
+    error insufficientMerchantBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
 
     /**
      * @dev Indicates a failure with `merchantId` and `inputCardSeries`. Used to check if the input `inputCardSeries` matches a `seriesId` that already exists.
@@ -740,8 +764,22 @@ interface ICardsFactory {
      */
     function deployNewCardSeries(uint256 _merchantId, string memory _seriesName, string memory _seriesSymbol, uint256 _maxSupply) external;
 
+    /**
+     * @notice Users can list their card by calling {list} so that their card can be bought by other users.
+     *
+     * Emits a {cardListed} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function list(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId, uint256 _price) external;
 
+    /**
+     * @notice Users can delist their card from the status of selling by calling {delist}.
+     *
+     * Emits a {cardDelisted} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
 
     /**
@@ -767,6 +805,15 @@ interface ICardsFactory {
      * @param _price the amount of token in exchange for the card minted
      */
     function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+
+    /**
+     * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
+     *
+     * Emits a {userWithdrawal} event.
+     *
+     * @param _amount the amount of tokens withdrawn from the private balance of `msg.sender`
+     */
+    function userWithdraw(uint256 _amount) external;
 
     /**
      * @notice a merchant can call {merchantWithdraw} to withdraw their token balance.
@@ -810,7 +857,12 @@ interface ICardsFactory {
     /**
      * @notice Get the amount of tokens currently stored in the card according to the given parameters.
      */
-    function getCardBalance(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
+    function getCardBalance(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (uint256);
+
+    /**
+     * @dev Get the private balance of `msg.sender` in {CardFactory}.
+     */
+    function getUserBalance() external view returns (uint256);
 
     /**
      * @notice Get the amount of profit(count in tokens) of the given `merchantId` currently stored in its account.
@@ -839,15 +891,18 @@ interface ICardsFactory {
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) external view returns (address);
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     *
      * @notice Get the current price of the card listed for sale.
      */
-    function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (uint256);
+    // function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (uint256);
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     * 
      * @notice Query the status of the card according to the given parameters.
      */
-    function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (bool);
-
+    // function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (bool);
 }
 ```
 
@@ -864,6 +919,7 @@ import "./ICardsFactory.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -893,9 +949,10 @@ contract CardsFactory is ICardsFactory, Ownable {
     mapping(uint256 merchantId => uint256 nonce) internal seriesIdOfMerchantId;
     mapping(address account => mapping(uint256 merchantId => bool isMerchant)) public merchantMembership;
     mapping(uint256 merchantId => mapping(uint256 seriesId => SeriesStruct)) public seriesInfo;
-    mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public
-        price;
-    mapping(uint256 merchantId => uint256 earnedValue) merchantBalance;
+    mapping(address user => uint256 privateBalance) private userBalance;
+    mapping(uint256 merchantId => uint256 earnedValue) private merchantBalance;
+    // State Variable Deprecated: The function related to this variable has been banned because listing and delisting has been realized off-chain instead.
+    // mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public price;
 
     constructor(address _imple, address _tokenAddr) Ownable(msg.sender) {
         implementationAddress = _imple;
@@ -912,7 +969,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
     modifier onlyCardOwner(uint256 merchantId, uint256 seriesId, uint256 tokenId) {
         address contractAddr = getCardSeriesAddress(merchantId, seriesId);
-        address cardOwner = ICardSeries(contractAddr).ownerOf(tokenId);
+        address cardOwner = IERC721(contractAddr).ownerOf(tokenId);
         if (msg.sender != cardOwner) {
             revert notCardOwner(msg.sender, merchantId, seriesId, tokenId);
         }
@@ -952,6 +1009,13 @@ contract CardsFactory is ICardsFactory, Ownable {
         emit cardSeriesDeployed(_merchantId, _seriesId, clonedImpleInstance);
     }
 
+    /**
+     * @notice Users can list their card by calling {list} so that their card can be bought by other users.
+     *
+     * Emits a {cardListed} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function list(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId, uint256 _price) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
     //     _checkCardSeries(_merchantId, _seriesId);
     //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
@@ -959,6 +1023,13 @@ contract CardsFactory is ICardsFactory, Ownable {
     //     emit cardListed(_merchantId, _seriesId, _tokenId, _price);
     // }
 
+    /**
+     * @notice Users can delist their card from the status of selling by calling {delist}.
+     *
+     * Emits a {cardDelisted} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
     //     _checkCardSeries(_merchantId, _seriesId);
     //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
@@ -1021,6 +1092,23 @@ contract CardsFactory is ICardsFactory, Ownable {
     }
 
     /**
+     * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
+     *
+     * Emits a {userWithdrawal} event.
+     *
+     * @param _amount the amount of tokens withdrawn from the private balance of `msg.sender`
+     */
+    function userWithdraw(uint256 _amount) public {
+        if (_amount > getUserBalance()) {
+            revert insufficientUserBalance(msg.sender, _amount, getUserBalance());
+        }
+        bool _success = IERC20(tokenAddress).transfer(msg.sender, _amount);
+        require(_success, "private withdrawal failed");
+        userBalance[msg.sender] -= _amount;
+        emit userWithdrawal(msg.sender, _amount);
+    }
+
+    /**
      * @notice a merchant can call {merchantWithdraw} to withdraw their token balance.
      *
      * Emits a {merchantWithdrawal} event.
@@ -1029,10 +1117,10 @@ contract CardsFactory is ICardsFactory, Ownable {
      */
     function merchantWithdraw(uint256 _merchantId, uint256 _amount) public onlyMerchant(_merchantId) {
         if (_amount > getMerchantBalance(_merchantId)) {
-            revert insufficientBalance(_merchantId, _amount, getMerchantBalance(_merchantId));
+            revert insufficientMerchantBalance(_merchantId, _amount, getMerchantBalance(_merchantId));
         }
         bool _success = IERC20(tokenAddress).transfer(msg.sender, _amount);
-        require(_success, "withdrawal failed");
+        require(_success, "merchant withdrawal failed");
         merchantBalance[_merchantId] -= _amount;
         emit merchantWithdrawal(_merchantId, msg.sender, _amount);
     }
@@ -1122,6 +1210,13 @@ contract CardsFactory is ICardsFactory, Ownable {
     }
 
     /**
+     * @dev Get the private balance of `msg.sender` in {CardFactory}.
+     */
+    function getUserBalance() public view returns (uint256) {
+        return userBalance[msg.sender];
+    }
+
+    /**
      * @dev Get the amount of profit(count in tokens) of the given `merchantId` currently stored in its account.
      */
     function getMerchantBalance(uint256 _merchantId) public view onlyMerchant(_merchantId) returns (uint256) {
@@ -1162,21 +1257,25 @@ contract CardsFactory is ICardsFactory, Ownable {
     }
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     *
      * @notice Get the current price of the card listed for sale.
      */
-    function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
-        _checkCardSeries(_merchantId, _seriesId);
-        return price[_merchantId][_seriesId][_tokenId];
-    }
+    // function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     return price[_merchantId][_seriesId][_tokenId];
+    // }
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     * 
      * @notice Query the status of the card according to the given parameters.
      */
-    function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (bool) {
-        _checkCardSeries(_merchantId, _seriesId);
-        bool isListed = price[_merchantId][_seriesId][_tokenId] != 0 ? true : false;
-        return isListed;
-    }
+    // function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (bool) {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     bool isListed = price[_merchantId][_seriesId][_tokenId] != 0 ? true : false;
+    //     return isListed;
+    // }
 }
 ```
 
@@ -1190,6 +1289,7 @@ import "./ICardsFactory.sol";																					// 实现工厂合约的基本
 import "@openzeppelin/contracts/proxy/Clones.sol";										// 实现最小代理的部署方法的库
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";							// ERC20 接口
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";			// 实现 SafeERC20 方法的库
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";						// 实现 ERC721 的外部接口
 import "@openzeppelin/contracts/access/Ownable.sol";									// 实现管理者方法的合约
 
 // 继承`ICardsFactory`接口和`Ownable`合约
@@ -1216,8 +1316,11 @@ contract CardsFactory is ICardsFactory, Ownable {
     mapping(address account => mapping(uint256 merchantId => bool isMerchant)) public merchantMembership;
 		// 记录特定商家的特定套卡的信息（使用结构体`SeriesStruct`记录）
 		mapping(uint256 merchantId => mapping(uint256 seriesId => SeriesStruct)) public seriesInfo;
-    mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public price;												// 记录特定商家的特定套卡的出售价格（若其值为 0 则表示非在售状态）
-    mapping(uint256 merchantId => uint256 earnedValue) merchantBalance;// 记录商家在该 Dapp 的当前余额（收益）
+    mapping(address user => uint256 privateBalance) private userBalance;				// 记录用户个人在该 Dapp 的当前余额
+    mapping(uint256 merchantId => uint256 earnedValue) private merchantBalance;	// 记录商家在该 Dapp 的当前余额（收益）
+    
+    // 状态变量 price（废弃）：记录特定商家的特定套卡的出售价格（若其值为 0 则表示非在售状态）
+    // mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public price;												
 }
 ```
 
@@ -1251,20 +1354,26 @@ contract CardsFactory is ICardsFactory, Ownable {
         uint256 indexed price
     );
 
-		// 事件（待定）：当某个单张会员卡被持有者上架售卖时，触发该事件
+		// 事件（废弃）：当某个单张会员卡被持有者上架售卖时，触发该事件
     // event cardListed(uint256 indexed merchantId, uint256 indexed seriesId, uint256 indexed tokenId, uint256 price);
 
-		// 事件（待定）：当某个单张会员卡被持有者下架（停止售卖）时，触发该事件
+		// 事件（废弃）：当某个单张会员卡被持有者下架（停止售卖）时，触发该事件
     // event cardDelisted(uint256 merchantId, uint256 seriesId, uint256 tokenId);
-
-		// 事件：当商家成员提取 Dapp 的账户金额时，触发该事件
+		
+		// 事件：当用户提取个人在 Dapp 中的账户金额时，触发该事件
+    event userWithdrawal(address user, uint256 withdrawnValue);
+    
+		// 事件：当商家成员提取商家在 Dapp 中的账户金额时，触发该事件
     event merchantWithdrawal(uint256 merchantId, address withdrawer, uint256 withdrawnValue);
 
 		// 错误：调用者非给定`merchantId`对应的商家的成员
     error notMerchantOfGivenId(uint256 merchantId, address caller);
+    
+    // 错误：用户个人提取的金额大于余额
+    error insufficientUserBalance(address user, uint256 withdrawal, uint256 balance);
 
 		// 错误：商家提取的金额大于余额
-    error insufficientBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
+    error insufficientMerchantBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
 
 		// 错误：输入的会员套卡ID不存在（未曾发行）
     error nonexistentCardSeries(uint256 merchantId, uint256 inputCardSeries);
@@ -1319,7 +1428,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 		// 函数修饰符：检查调用者是否为会员卡的持有者
     modifier onlyCardOwner(uint256 merchantId, uint256 seriesId, uint256 tokenId) {
         address contractAddr = getCardSeriesAddress(merchantId, seriesId);
-        address cardOwner = ICardSeries(contractAddr).ownerOf(tokenId);
+        address cardOwner = IERC721(contractAddr).ownerOf(tokenId);
         if (msg.sender != cardOwner) {
             revert notCardOwner(msg.sender, merchantId, seriesId, tokenId);
         }
@@ -1375,6 +1484,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 contract CardsFactory is ICardsFactory, Ownable {
 		// 其他逻辑...
 		
+		// 铸造新的会员卡
 		// 函数修饰符`onlyMerchant`限定：仅商家可以调用该方法
 		function mintCard(
         uint256 _merchantId,
@@ -1434,12 +1544,40 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-9. 方法：商家提取 Dapp 中的金额（ERC20 token）
+#### 1-9. 方法：用户提取个人在 Dapp 中的金额（ERC20 token）
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
 		// 其他逻辑...
 		
+		// 用户提取个人在 Dapp 中的金额
+		function userWithdraw(uint256 _amount) public {
+				// 检查：用户提取的金额是否超过余额
+        if (_amount > getUserBalance()) {
+            revert insufficientUserBalance(msg.sender, _amount, getUserBalance());
+        }
+        // 执行转账动作（从当前合约至调用者）
+        bool _success = IERC20(tokenAddress).transfer(msg.sender, _amount);
+        // 检测转账是否完成
+        require(_success, "private withdrawal failed");
+        // 用户个人在 Dapp 中的余额扣除当前取出的金额
+        userBalance[msg.sender] -= _amount;
+        emit userWithdrawal(msg.sender, _amount);
+    }
+		
+		// 其他逻辑...
+}
+```
+
+
+
+#### 1-10. 方法：商家提取在 Dapp 中的金额（ERC20 token）
+
+```solidity
+contract CardsFactory is ICardsFactory, Ownable {
+		// 其他逻辑...
+		
+		// 商家提取在 Dapp 中的金额
 		// 函数修饰符`onlyMerchant`限定：仅商家可以调用该方法
 		function merchantWithdraw(uint256 _merchantId, uint256 _amount) public onlyMerchant(_merchantId) {
 				// 检查：商家提取的金额是否超过余额
@@ -1449,7 +1587,7 @@ contract CardsFactory is ICardsFactory, Ownable {
         // 执行转账动作（从当前合约至调用者）
         bool _success = IERC20(tokenAddress).transfer(msg.sender, _amount);
         // 检测转账是否完成
-        require(_success, "withdrawal failed");
+        require(_success, "merchant withdrawal failed");
         // 商家在 Dapp 中的余额扣除当前取出的金额
         merchantBalance[_merchantId] -= _amount;
         emit merchantWithdrawal(_merchantId, msg.sender, _amount);
@@ -1461,7 +1599,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-10. 方法：用户注册新商家（并成为商家成员）
+#### 1-11. 方法：用户注册新商家（并成为商家成员）
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1480,7 +1618,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-11. 方法：商家新增成员
+#### 1-12. 方法：商家新增成员
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1503,7 +1641,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-12. 方法：商家移除成员
+#### 1-13. 方法：商家移除成员
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1526,7 +1664,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-13. 只读方法：获取单张会员卡内的余额
+#### 1-14. 只读方法：获取单张会员卡内的余额
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1545,7 +1683,24 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-14. 只读方法：获取商家在 Dapp 中的余额（ERC20 token）
+#### 1-15. 只读方法：获取用户个人在 Dapp 中的余额（ERC20 token）
+
+```solidity
+contract CardsFactory is ICardsFactory, Ownable {
+		// 其他逻辑...
+		
+		// 获取用户个人在 Dapp 中的余额（通常为转手会员卡所获的的回报）
+    function getUserBalance() public view returns (uint256) {
+        return userBalance[msg.sender];
+    }
+		
+		// 其他逻辑...
+}
+```
+
+
+
+#### 1-16. 只读方法：获取商家在 Dapp 中的余额（ERC20 token）
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1564,7 +1719,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-15. 只读方法：检查某地址是否为某一商家的成员
+#### 1-17. 只读方法：检查某地址是否为某一商家的成员
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1583,7 +1738,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-16. 只读方法：获取某一合约套卡的当前总量
+#### 1-18. 只读方法：获取某一合约套卡的当前总量
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1602,7 +1757,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-17. 只读方法：获取商家总数（也即最大商家ID）
+#### 1-19. 只读方法：获取商家总数（也即最大商家ID）
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1619,7 +1774,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-18. 只读方法：获取会员套卡的合约地址
+#### 1-20. 只读方法：获取会员套卡的合约地址
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1635,41 +1790,3 @@ contract CardsFactory is ICardsFactory, Ownable {
 		// 其他逻辑...
 }
 ```
-
-
-
-#### 1-19. 只读方法：获取某个被上架售卖的会员卡的价格
-
-```solidity
-contract CardsFactory is ICardsFactory, Ownable {
-		// 其他逻辑...
-		
-		// 获取被上架售卖的会员卡的价格
-		function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
-        _checkCardSeries(_merchantId, _seriesId);					// （内部）方法：检查输入的商家ID和会员套卡ID是否均存在
-        return price[_merchantId][_seriesId][_tokenId];		// 返回该会员卡的价格
-    }
-		
-		// 其他逻辑...
-}
-```
-
-
-
-#### 1-20. 只读方法：获取某个会员卡是否处于已上架（是否处于售卖状态）
-
-```solidity
-contract CardsFactory is ICardsFactory, Ownable {
-		// 其他逻辑...
-		
-		// 获取某个会员卡是否处于已上架
-		function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (bool) {
-        _checkCardSeries(_merchantId, _seriesId);					// （内部）方法：检查输入的商家ID和会员套卡ID是否均存在
-        bool isListed = price[_merchantId][_seriesId][_tokenId] != 0 ? true : false;	// 检查售价是否为 0
-        return isListed;																															// 返回结果
-    }
-		
-		// 其他逻辑...
-}
-```
-

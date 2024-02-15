@@ -40,13 +40,22 @@ interface ICardsFactory {
 
     /**
      * @dev Emitted when a card is listed for sale.
+     *
+     * Event Deprecated: The functions which can emit this event are banned because listing and delisting will be realized off-chain.
      */
     // event cardListed(uint256 indexed merchantId, uint256 indexed seriesId, uint256 indexed tokenId, uint256 price);
 
     /**
      * @dev Emitted when a card is delisted from the selling status.
+     *
+     * Event Deprecated: The functions which can emit this event are banned because listing and delisting will be realized off-chain.
      */
     // event cardDelisted(uint256 merchantId, uint256 seriesId, uint256 tokenId);
+
+    /**
+     * @dev Emitted when a user withdraw its balance by calling {userWithdraw}.
+     */
+    event userWithdrawal(address user, uint256 withdrawnValue);
 
     /**
      * @dev Emitted when a member of a specific merchant withdraw the balance of the merchant by calling {merchantWithdraw}.
@@ -59,9 +68,14 @@ interface ICardsFactory {
     error notMerchantOfGivenId(uint256 merchantId, address caller);
 
     /**
+     * @dev Indicates a failure with `user`, the amount of `withdrawal` and the current balance of the merchant `balance`. Used in withdrawing from `userBalance` by a user.
+     */
+    error insufficientUserBalance(address user, uint256 withdrawal, uint256 balance);
+
+    /**
      * @dev Indicates a failure with `merchantId`, the amount of `withdrawal` and the current balance of the merchant `balance`. Used in withdrawal by a merchant member.
      */
-    error insufficientBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
+    error insufficientMerchantBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
 
     /**
      * @dev Indicates a failure with `merchantId` and `inputCardSeries`. Used to check if the input `inputCardSeries` matches a `seriesId` that already exists.
@@ -95,8 +109,22 @@ interface ICardsFactory {
      */
     function deployNewCardSeries(uint256 _merchantId, string memory _seriesName, string memory _seriesSymbol, uint256 _maxSupply) external;
 
+    /**
+     * @notice Users can list their card by calling {list} so that their card can be bought by other users.
+     *
+     * Emits a {cardListed} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function list(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId, uint256 _price) external;
 
+    /**
+     * @notice Users can delist their card from the status of selling by calling {delist}.
+     *
+     * Emits a {cardDelisted} event.
+     *
+     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
 
     /**
@@ -122,6 +150,15 @@ interface ICardsFactory {
      * @param _price the amount of token in exchange for the card minted
      */
     function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+
+    /**
+     * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
+     *
+     * Emits a {userWithdrawal} event.
+     *
+     * @param _amount the amount of tokens withdrawn from the private balance of `msg.sender`
+     */
+    function userWithdraw(uint256 _amount) external;
 
     /**
      * @notice a merchant can call {merchantWithdraw} to withdraw their token balance.
@@ -165,7 +202,12 @@ interface ICardsFactory {
     /**
      * @notice Get the amount of tokens currently stored in the card according to the given parameters.
      */
-    function getCardBalance(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
+    function getCardBalance(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (uint256);
+
+    /**
+     * @dev Get the private balance of `msg.sender` in {CardFactory}.
+     */
+    function getUserBalance() external view returns (uint256);
 
     /**
      * @notice Get the amount of profit(count in tokens) of the given `merchantId` currently stored in its account.
@@ -194,13 +236,16 @@ interface ICardsFactory {
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) external view returns (address);
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     *
      * @notice Get the current price of the card listed for sale.
      */
-    function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (uint256);
+    // function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (uint256);
 
     /**
+     * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
+     * 
      * @notice Query the status of the card according to the given parameters.
      */
-    function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (bool);
-
+    // function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external view returns (bool);
 }
