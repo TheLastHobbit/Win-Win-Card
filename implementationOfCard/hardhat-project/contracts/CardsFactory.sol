@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./CardSeries.sol";
+import "./ICardSeries.sol";
+import "./ICardsFactory.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -9,8 +10,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title This is a factory contract that clones the implementation contracts of membership cards.
+ *
+ * @dev Implementation of the {ICardsFactory} interface.
  */
-contract CardsFactory is Ownable {
+contract CardsFactory is ICardsFactory, Ownable {
     using Clones for address;
     using SafeERC20 for IERC20;
 
@@ -36,27 +39,6 @@ contract CardsFactory is Ownable {
         price;
     mapping(uint256 merchantId => uint256 earnedValue) merchantBalance;
 
-    event merchantRegistered(address account, uint256 merchantId);
-    event merchantMemberAdded(uint256 merchantId, address memberAddr);
-    event merchantMemberRemoved(uint256 merchantId, address memberAddr);
-    event cardSeriesDeployed(uint256 merchantId, uint256 seriesId, address instanceAddress);
-    event cardMinted(
-        uint256 merchantId,
-        uint256 seriesId,
-        address indexed recipient,
-        uint256 indexed tokenId,
-        uint256 storedValue,
-        uint256 indexed price
-    );
-    event cardListed(uint256 indexed merchantId, uint256 indexed seriesId, uint256 indexed tokenId, uint256 price);
-    event cardDelisted(uint256 merchantId, uint256 seriesId, uint256 tokenId);
-    event merchantWithdrawal(uint256 merchantId, address withdrawer, uint256 withdrawnValue);
-
-    error notMerchantOfGivenId(uint256 merchantId, address caller);
-    error insufficientBalance(uint256 merchantId, uint256 withdrawal, uint256 balance);
-    error nonexistentCardSeries(uint256 merchantId, uint256 inputCardSeries);
-    error notCardOwner(address caller, uint256 merchantId, uint256 seriesId, uint256 tokenId);
-
     constructor(address _imple, address _tokenAddr) Ownable(msg.sender) {
         implementationAddress = _imple;
         tokenAddress = _tokenAddr;
@@ -72,7 +54,7 @@ contract CardsFactory is Ownable {
 
     modifier onlyCardOwner(uint256 merchantId, uint256 seriesId, uint256 tokenId) {
         address contractAddr = getCardSeriesAddress(merchantId, seriesId);
-        address cardOwner = CardSeries(contractAddr).ownerOf(tokenId);
+        address cardOwner = ICardSeries(contractAddr).ownerOf(tokenId);
         if (msg.sender != cardOwner) {
             revert notCardOwner(msg.sender, merchantId, seriesId, tokenId);
         }
@@ -82,6 +64,9 @@ contract CardsFactory is Ownable {
     /**
      * @dev Using the implementation contract to deploy its contract instance. Every instance is a unique series of membership cards.
      *
+     * Emits a {cardSeriesDeployed} event.
+     *
+     * @param _merchantId a unique ID number to identify the corresponding merchant
      * @param _seriesName the name of the series of membership cards
      * @param _seriesSymbol the symbol of the series of membership cards
      * @param _maxSupply the max supply of the series of membership cards(if this maximum is reached, card cannot been minted any more)
@@ -103,32 +88,30 @@ contract CardsFactory is Ownable {
             contractAddr: clonedImpleInstance
         });
         seriesInfo[_merchantId][_seriesId] = deployedSeriesInfo;
-        CardSeries(clonedImpleInstance).init(address(this), _merchantId, _seriesName, _seriesSymbol, _maxSupply);
+        ICardSeries(clonedImpleInstance).init(
+            address(this), _merchantId, _seriesId, _seriesName, _seriesSymbol, _maxSupply
+        );
         emit cardSeriesDeployed(_merchantId, _seriesId, clonedImpleInstance);
     }
 
-    /**
-     * @notice The owner of a specific card(specified by `_merchantId`, `_seriesId` and `_tokenId`) can call {list} to make the card available for sale.
-     */
-    function list(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId, uint256 _price) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
-        _checkCardSeries(_merchantId, _seriesId);
-        address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        price[_merchantId][_seriesId][_tokenId] = _price;
-        emit cardListed(_merchantId, _seriesId, _tokenId, _price);
-    }
+    // function list(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId, uint256 _price) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
+    //     price[_merchantId][_seriesId][_tokenId] = _price;
+    //     emit cardListed(_merchantId, _seriesId, _tokenId, _price);
+    // }
 
-    /**
-     * @notice When a card is on sale, the authorized address of the card can call {delist} to stop selling.
-     */
-    function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
-        _checkCardSeries(_merchantId, _seriesId);
-        address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        delete price[_merchantId][_seriesId][_tokenId];
-        emit cardDelisted(_merchantId, _seriesId, _tokenId);
-    }
+    // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public onlyCardOwner(_merchantId, _seriesId, _tokenId) {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
+    //     delete price[_merchantId][_seriesId][_tokenId];
+    //     emit cardDelisted(_merchantId, _seriesId, _tokenId);
+    // }
 
     /**
      * @notice Mint a new card by the corresponding merchant.
+     *
+     * Emits a {cardMinted} event.
      *
      * @param _to the address of the recipient.
      * @param _tokenURI a custom string which is stored in the card
@@ -138,36 +121,54 @@ contract CardsFactory is Ownable {
         uint256 _merchantId,
         uint256 _seriesId,
         address _to,
-        string memory _tokenURI,
+        string calldata _tokenURI,
         uint256 _storedValue,
         uint256 _price
-    ) public onlyMerchant(_merchantId) {
+    ) external onlyMerchant(_merchantId) {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        uint256 tokenId = CardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
         IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
         merchantBalance[_merchantId] += _price;
         emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
     }
 
+    /**
+     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     *
+     * Emits a {cardMinted} event.
+     *
+     * @param _merkleProof the proof offered by the merchant with a given account(address)
+     * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
+     * @param _tokenURI a custom string which is stored in the card minted
+     * @param _storedValue the amount of token stored in the card minted
+     * @param _price the amount of token in exchange for the card minted
+     */
     function cardClaim(
         uint256 _merchantId,
         uint256 _seriesId,
         bytes32[] calldata _merkleProof,
         bytes32 _MerkleRoot,
-        string memory _tokenURI,
+        string calldata _tokenURI,
         uint256 _storedValue,
         uint256 _price
     ) external {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        CardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _storedValue, _price);
-        uint256 tokenId = CardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue);
+        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _storedValue, _price);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue);
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
         merchantBalance[_merchantId] += _price;
         emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue, _price);
     }
 
+    /**
+     * @notice a merchant can call {merchantWithdraw} to withdraw their token balance.
+     *
+     * Emits a {merchantWithdrawal} event.
+     *
+     * @param _amount the amount of tokens withdrawn by the merchant members
+     */
     function merchantWithdraw(uint256 _merchantId, uint256 _amount) public onlyMerchant(_merchantId) {
         if (_amount > getMerchantBalance(_merchantId)) {
             revert insufficientBalance(_merchantId, _amount, getMerchantBalance(_merchantId));
@@ -182,6 +183,8 @@ contract CardsFactory is Ownable {
      * @notice This function will create a new merchant on this platform with a unique merchant ID(i.e.`merchantId`).
      * And every call of {merchantRegistration} by the same address will generate two unique merchant IDs separately.
      *
+     * Emits a {merchantRegistered} event.
+     *
      * @dev The state variable `merchantNumber` starts from 1. And it also figures out how many merchants have registered on this platform.
      */
     function merchantRegistration() public {
@@ -193,17 +196,33 @@ contract CardsFactory is Ownable {
     /**
      * @notice This function is used to add a member to a merchant(identified by `merchantId`).
      * The caller must be the member of the merchantId, or the call will revert.
+     *
+     * Emits a {merchantMemberAdded} event.
+     *
+     * @param _account the address is assigned to the given `_merchantId`
      */
-    function addMerchantMember(uint256 _merchantId, address _member) public onlyMerchant(_merchantId) {
-        merchantMembership[_member][_merchantId] = true;
-        emit merchantMemberAdded(_merchantId, _member);
+    function addMerchantMember(uint256 _merchantId, address _account) public onlyMerchant(_merchantId) {
+        bool isMerchantMember = merchantMembership[_account][_merchantId];
+        if (_account == address(0) || isMerchantMember) {
+            revert inapplicableAddress(_account);
+        }
+        merchantMembership[_account][_merchantId] = true;
+        emit merchantMemberAdded(_merchantId, _account);
     }
 
     /**
      * @notice This function is used to remove a member to a merchant(identified by `merchantId`).
      * The caller must be the member of the merchantId, or the call will revert.
+     *
+     * Emits a {merchantMemberRemoved} event.
+     *
+     * @param _member the address is removed from the given `_merchantId`
      */
     function removeMerchantMember(uint256 _merchantId, address _member) public onlyMerchant(_merchantId) {
+        bool isMerchantMember = merchantMembership[_member][_merchantId];
+        if (!isMerchantMember) {
+            revert inapplicableAddress(_member);
+        }
         merchantMembership[_member][_merchantId] = false;
         emit merchantMemberRemoved(_merchantId, _member);
     }
@@ -215,24 +234,45 @@ contract CardsFactory is Ownable {
         return seriesIdOfMerchantId[_merchantId]++;
     }
 
+    /**
+     * @dev This function is used to check the existence of the card series and the merchant based on the given parameters.
+     */
     function _checkCardSeries(uint256 _merchantId, uint256 _seriesId) internal view {
+        _checkMerchantExistence(_merchantId);
         address contractAddr = seriesInfo[_merchantId][_seriesId].contractAddr;
         if (contractAddr == address(0)) {
             revert nonexistentCardSeries(_merchantId, _seriesId);
         }
     }
 
+    /**
+     * @dev This function is used to check the existence of the merchant based on the given `_merchantId`.
+     */
+    function _checkMerchantExistence(uint256 _merchantId) internal view {
+        if (_merchantId > merchantNumber) {
+            revert nonexistentMerchant(_merchantId);
+        }
+    }
+
+    /**
+     * @dev Get the amount of tokens currently stored in the card according to the given parameters.
+     */
     function getCardBalance(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        return CardSeries(contractAddress).getCardBalance(_tokenId);
+        return ICardSeries(contractAddress).getCardBalance(_tokenId);
     }
 
+    /**
+     * @dev Get the amount of profit(count in tokens) of the given `merchantId` currently stored in its account.
+     */
     function getMerchantBalance(uint256 _merchantId) public view onlyMerchant(_merchantId) returns (uint256) {
+        _checkMerchantExistence(_merchantId);
         return merchantBalance[_merchantId];
     }
 
     function checkMembershipOfMerchantId(address _account, uint256 _merchantId) external view returns (bool) {
+        _checkMerchantExistence(_merchantId);
         bool isMerchantMember = merchantMembership[_account][_merchantId];
         return (isMerchantMember);
     }
@@ -244,7 +284,7 @@ contract CardsFactory is Ownable {
     function getCurrentSupply(uint256 _merchantId, uint256 _seriesId) public view returns (uint256) {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        return CardSeries(contractAddress).getCurrentSupply();
+        return ICardSeries(contractAddress).getCurrentSupply();
     }
 
     /**
@@ -254,17 +294,26 @@ contract CardsFactory is Ownable {
         return merchantNumber;
     }
 
+    /**
+     * @notice Get the contract address of the card series based on the given `_merchantId` and `_seriesId`.
+     */
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) public view returns (address) {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = seriesInfo[_merchantId][_seriesId].contractAddr;
         return contractAddress;
     }
 
+    /**
+     * @notice Get the current price of the card listed for sale.
+     */
     function getCardPrice(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (uint256) {
         _checkCardSeries(_merchantId, _seriesId);
         return price[_merchantId][_seriesId][_tokenId];
     }
 
+    /**
+     * @notice Query the status of the card according to the given parameters.
+     */
     function queryCardStatus(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) public view returns (bool) {
         _checkCardSeries(_merchantId, _seriesId);
         bool isListed = price[_merchantId][_seriesId][_tokenId] != 0 ? true : false;

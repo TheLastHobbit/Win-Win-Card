@@ -64,13 +64,14 @@ const App = () => {
   const ERC721Permit_Buy_TokenId = useRef<HTMLInputElement>(null);
   const ERC721Permit_Buy_Deadline = useRef<HTMLInputElement>(null);
 
-  // NFT-Permit listWithPermit@NFTMarket
-  const ERC721Permit_List_Name = useRef<HTMLInputElement>(null);
-  const ERC721Permit_List_ChainId = useRef<HTMLInputElement>(null);
-  const ERC721Permit_List_VerifyingContract = useRef<HTMLInputElement>(null);
-  const ERC721Permit_List_Operator = useRef<HTMLInputElement>(null);
-  const ERC721Permit_List_TokenId = useRef<HTMLInputElement>(null);
-  const ERC721Permit_List_Deadline = useRef<HTMLInputElement>(null);
+  // Inputs of the function for Card Permit
+  const cardPermit_name = useRef<HTMLInputElement>(null);
+  const cardPermit_chainId = useRef<HTMLInputElement>(null);
+  const cardPermit_verifyingContract = useRef<HTMLInputElement>(null);
+  const cardPermit_operator = useRef<HTMLInputElement>(null);
+  const cardPermit_tokenId = useRef<HTMLInputElement>(null);
+  const cardPermit_data = useRef<HTMLInputElement>(null);
+  const cardPermit_deadline = useRef<HTMLInputElement>(null);
 
   // Merkle Tree Building And Generation of Merkle Proof
   let valueOfParam0_MerkleTree = useRef<HTMLInputElement>(null);
@@ -573,28 +574,24 @@ const App = () => {
 
   // Card permit: sign typed data
   const sign_CardPermit = async () => {
-    const name = ERC721Permit_List_Name.current?.value;
+    const name = cardPermit_name.current?.value;
     const version = "1";
-    const chainId = ERC721Permit_List_ChainId.current?.value;
-    const verifyingContract =
-      ERC721Permit_List_VerifyingContract.current?.value;
-    const operator = ERC721Permit_List_Operator.current?.value;
-    const tokenId = ERC721Permit_List_TokenId.current?.value;
-    const deadline = ERC721Permit_List_Deadline.current?.value;
+    const chainId = cardPermit_chainId.current?.value;
+    const verifyingContract = cardPermit_verifyingContract.current?.value;
+    const operator = cardPermit_operator.current?.value;
+    const tokenId = cardPermit_tokenId.current?.value;
+    const data = cardPermit_data.current?.value;
+    const deadline = cardPermit_deadline.current?.value;
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const signerAddress = await signer.getAddress();
     const tokenAddress = verifyingContract;
     const tokenAbi = ["function nonces(address owner) view returns (uint256)"];
-    let ERC721WithPermitContract;
+    let contractInstance;
     let nonce;
     if (tokenAddress) {
-      ERC721WithPermitContract = new ethers.Contract(
-        tokenAddress,
-        tokenAbi,
-        provider
-      );
-      nonce = await ERC721WithPermitContract.nonces(signerAddress);
+      contractInstance = new ethers.Contract(tokenAddress, tokenAbi, provider);
+      nonce = await contractInstance.nonces(signerAddress);
     } else {
       console.log("Invalid token address");
     }
@@ -610,6 +607,7 @@ const App = () => {
       cardPermit: [
         { name: "operator", type: "address" },
         { name: "tokenId", type: "uint256" },
+        { name: "data", type: "bytes[]" },
         { name: "signerNonce", type: "uint256" },
         { name: "deadline", type: "uint256" },
       ],
@@ -618,6 +616,7 @@ const App = () => {
     const message = {
       operator: operator,
       tokenId: tokenId,
+      data: data,
       signerNonce: nonce,
       deadline: deadline,
     };
@@ -640,7 +639,12 @@ const App = () => {
     const valueOfParam2 = valueOfParam2_MerkleTree.current?.value;
     const valueOfParam3 = valueOfParam3_MerkleTree.current?.value;
     if (valueOfParam0 && valueOfParam1 && valueOfParam2 && valueOfParam3) {
-      const memberUnit = [valueOfParam0, valueOfParam1, valueOfParam2, valueOfParam3];
+      const memberUnit = [
+        valueOfParam0,
+        valueOfParam1,
+        valueOfParam2,
+        valueOfParam3,
+      ];
       param0OfMerkleTree.push(memberUnit);
       console.log(`"memberUnit"@index${inputCounter}: ${memberUnit}`);
       console.log(`param0OfMerkleTree: ${param0OfMerkleTree}`);
@@ -726,7 +730,12 @@ const App = () => {
         console.log("From server || storedValue:", data.storedValue);
         console.log("From server || tokenURI:", data.tokenURI);
         console.log("From server || price:", data.price);
-        return { MerkleProof: data.MerkleProof, storedValue: data.storedValue, tokenURI: data.tokenURI, price: data.price };
+        return {
+          MerkleProof: data.MerkleProof,
+          storedValue: data.storedValue,
+          tokenURI: data.tokenURI,
+          price: data.price,
+        };
       } catch (error) {
         counter++;
         console.error("Failed to fetch Merkle proof:", error);
@@ -735,7 +744,12 @@ const App = () => {
     if (counter >= 20) {
       console.log("Failed to fetch data after several attempts");
     }
-    return { MerkleProof: undefined, storedValue: undefined, tokenURI: undefined, price: undefined };
+    return {
+      MerkleProof: undefined,
+      storedValue: undefined,
+      tokenURI: undefined,
+      price: undefined,
+    };
   };
 
   const getWhitelistData = async () => {
@@ -805,7 +819,7 @@ const App = () => {
     const price = (await MerkleData).price;
     const abiOfCardExchange = [
       "function cardClaim(bytes32[], bytes32, string, uint256, uint256) external",
-      ""
+      "",
     ];
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -818,7 +832,7 @@ const App = () => {
       NFTMarketContract.cardClaim(
         MerkleProof,
         storedValue,
-        
+
         whitelistData
       );
     }
@@ -1106,37 +1120,43 @@ const App = () => {
               <>
                 <label>Token Name:</label>
                 <input
-                  ref={ERC721Permit_List_Name}
+                  ref={cardPermit_name}
                   placeholder="Token Name"
                   type="text"
                 />
                 <label>ChainId:</label>
                 <input
-                  ref={ERC721Permit_List_ChainId}
+                  ref={cardPermit_chainId}
                   placeholder="ChainId"
                   type="text"
                 />
                 <label>Verifying Contract Address:</label>
                 <input
-                  ref={ERC721Permit_List_VerifyingContract}
+                  ref={cardPermit_verifyingContract}
                   placeholder="Verifying Contract Address"
                   type="text"
                 />
                 <label>Operator:</label>
                 <input
-                  ref={ERC721Permit_List_Operator}
+                  ref={cardPermit_operator}
                   placeholder="Operator"
                   type="text"
                 />
                 <label>TokenId:</label>
                 <input
-                  ref={ERC721Permit_List_TokenId}
+                  ref={cardPermit_tokenId}
                   placeholder="TokenId"
+                  type="text"
+                />
+                <label>Data:</label>
+                <input
+                  ref={cardPermit_data}
+                  placeholder="Data(Bytes[])"
                   type="text"
                 />
                 <label>Deadline:</label>
                 <input
-                  ref={ERC721Permit_List_Deadline}
+                  ref={cardPermit_deadline}
                   placeholder="Deadline"
                   type="text"
                 />
