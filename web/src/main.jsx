@@ -47,7 +47,7 @@ root.render(
             language="en"
             theme={'light'}
         >
-            <ConnectButton />
+            <App />
         </ModalProvider>
     </React.StrictMode>
 );
