@@ -23,6 +23,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     uint256 private currentSupply;
     uint256 public maxSupply;
     mapping(uint256 tokenId => uint256 tokenValue) public cardBalance;
+    mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum;
 
     constructor() ERC721("XiJianChui", "XJC") {}
 
@@ -135,11 +136,34 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     }
 
     /**
+     * @dev Conduct the action of card transfer. The card will be transferred from the owner of the card to `_to`.
+     *
+     * Emits a {Transfer} event.
+     */
+    function executeCardTransfer(address _to, uint256 _tokenId) public onlyFactory {
+        address cardOwner = ownerOf(_tokenId);
+        if (_to == cardOwner || _to == address(0)) {
+            revert invalidAddress(_to);
+        }
+        safeTransferFrom(msg.sender, _to, _tokenId);
+        transNum[_tokenId]++;
+    }
+
+    /**
      * @notice The external function {approve} of the contract {ERC721} is banned in this contract.
      *
      * Note that any cards should keep their approval to `factory` at any time.
      */
-    function approve(address to, uint256 tokenId) public pure override(ICardSeries, ERC721, IERC721) {
+    function approve(address to, uint256 tokenId) public pure override(ERC721, IERC721) {
+        revert externalApproveBanned();
+    }
+
+    /**
+     * @notice The external function {setApprovalForAll} of the contract {ERC721} is banned in this contract.
+     *
+     * Note that any cards should keep their approval to `factory` at any time.
+     */
+    function setApprovalForAll(address operator, bool approved) public pure override(ERC721, IERC721) {
         revert externalApproveBanned();
     }
 
@@ -185,14 +209,14 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     /**
      * @notice Get the `name` of the current card series.
      */
-    function getCardName() public view returns (string memory) {
+    function name() public view override(ERC721) returns (string memory) {
         return cardName;
     }
 
     /**
      * @notice Get the `symbol` of the current card series.
      */
-    function getCardSymbol() public view returns (string memory) {
+    function symbol() public view override(ERC721) returns (string memory) {
         return cardSymbol;
     }
 
@@ -204,7 +228,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     }
 
     /**
-     * @notice Get the `cardBalance` of the current card series.
+     * @notice Get the `cardBalance` of the current card.
      */
     function getCardBalance(uint256 _tokenId) public view returns (uint256) {
         address cardOwner = ownerOf(_tokenId);
@@ -212,5 +236,12 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
             revert notCardOwner();
         }
         return cardBalance[_tokenId];
+    }
+
+    /**
+     * @notice Get the `transNum` of the card corresponding to the input `_tokenId`.
+     */
+    function getTransNum(uint256 _tokenId) public view returns (uint256) {
+        return transNum[_tokenId];
     }
 }

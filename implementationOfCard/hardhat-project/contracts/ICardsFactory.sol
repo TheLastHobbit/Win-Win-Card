@@ -123,7 +123,7 @@ interface ICardsFactory {
      *
      * Emits a {cardDelisted} event.
      *
-     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     * @dev Function Deprecated: The function for delisting cards is realized off-chain instead.
      */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
 

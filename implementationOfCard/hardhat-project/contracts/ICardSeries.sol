@@ -41,7 +41,12 @@ interface ICardSeries {
      * @dev Indicates a failure when any account(address) calls {approve}.
      */
     error externalApproveBanned();
-    
+
+    /**
+     * @dev Indicates a failure with `inputAddr`. Used in checking if the input address is applicable to the function called.
+     */
+    error invalidAddress(address inputAddr);
+
     /**
      * @dev Because the constructor does not work when this contract is deployed via minimal proxy, this function will initialize 
      * the state variables of itself and its parent contract(s).
@@ -87,13 +92,13 @@ interface ICardSeries {
      * @param _s ECDSA signature parameter s
      */
     function cardPermit(address _operator, uint256 _tokenId, bytes[] calldata _data, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (bool);
-    
+
     /**
-     * @notice The external function {approve} of the contract {ERC721} is banned in this contract.
+     * @dev Conduct the action of card transfer. The card will be transferred from the owner of the card to `_to`.
      *
-     * Note that any cards should keep their approval to `factory` at any time.
+     * Emits a {Transfer} event.
      */
-    function approve(address to, uint256 tokenId) external pure;
+    function executeCardTransfer(address _to, uint256 _tokenId) external;
 
     /**
      * @notice Get the `merchantId` of the current card series.
@@ -106,16 +111,6 @@ interface ICardSeries {
     function getSeriesId() external view returns (uint256);
 
     /**
-     * @notice Get the `name` of the current card series.
-     */
-    function getCardName() external view returns (string memory);
-
-    /**
-     * @notice Get the `symbol` of the current card series.
-     */
-    function getCardSymbol() external view returns (string memory);
-
-    /**
      * @notice Get the `currentSupply` of the current card series.
      */
     function getCurrentSupply() external view returns (uint256);
@@ -124,4 +119,9 @@ interface ICardSeries {
      * @notice Get the `cardBalance` of the current card series.
      */
     function getCardBalance(uint256 _tokenId) external view returns (uint256);
+
+    /**
+     * @notice Get the `transNum` of the card corresponding to the input `_tokenId`.
+     */
+    function getTransNum(uint256 _tokenId) external view returns (uint256);
 }

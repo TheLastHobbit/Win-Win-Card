@@ -73,7 +73,12 @@ interface ICardSeries {
      * @dev Indicates a failure when any account(address) calls {approve}.
      */
     error externalApproveBanned();
-    
+
+    /**
+     * @dev Indicates a failure with `inputAddr`. Used in checking if the input address is applicable to the function called.
+     */
+    error invalidAddress(address inputAddr);
+
     /**
      * @dev Because the constructor does not work when this contract is deployed via minimal proxy, this function will initialize 
      * the state variables of itself and its parent contract(s).
@@ -119,13 +124,13 @@ interface ICardSeries {
      * @param _s ECDSA signature parameter s
      */
     function cardPermit(address _operator, uint256 _tokenId, bytes[] calldata _data, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (bool);
-    
+
     /**
-     * @notice The external function {approve} of the contract {ERC721} is banned in this contract.
+     * @dev Conduct the action of card transfer. The card will be transferred from the owner of the card to `_to`.
      *
-     * Note that any cards should keep their approval to `factory` at any time.
+     * Emits a {Transfer} event.
      */
-    function approve(address to, uint256 tokenId) external pure;
+    function executeCardTransfer(address _to, uint256 _tokenId) external;
 
     /**
      * @notice Get the `merchantId` of the current card series.
@@ -138,16 +143,6 @@ interface ICardSeries {
     function getSeriesId() external view returns (uint256);
 
     /**
-     * @notice Get the `name` of the current card series.
-     */
-    function getCardName() external view returns (string memory);
-
-    /**
-     * @notice Get the `symbol` of the current card series.
-     */
-    function getCardSymbol() external view returns (string memory);
-
-    /**
      * @notice Get the `currentSupply` of the current card series.
      */
     function getCurrentSupply() external view returns (uint256);
@@ -156,6 +151,11 @@ interface ICardSeries {
      * @notice Get the `cardBalance` of the current card series.
      */
     function getCardBalance(uint256 _tokenId) external view returns (uint256);
+
+    /**
+     * @notice Get the `transNum` of the card corresponding to the input `_tokenId`.
+     */
+    function getTransNum(uint256 _tokenId) external view returns (uint256);
 }
 ```
 
@@ -189,6 +189,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     uint256 private currentSupply;
     uint256 public maxSupply;
     mapping(uint256 tokenId => uint256 tokenValue) public cardBalance;
+    mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum;
 
     constructor() ERC721("XiJianChui", "XJC") {}
 
@@ -301,11 +302,34 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     }
 
     /**
+     * @dev Conduct the action of card transfer. The card will be transferred from the owner of the card to `_to`.
+     *
+     * Emits a {Transfer} event.
+     */
+    function executeCardTransfer(address _to, uint256 _tokenId) public onlyFactory {
+        address cardOwner = ownerOf(_tokenId);
+        if (_to == cardOwner || _to == address(0)) {
+            revert invalidAddress(_to);
+        }
+        safeTransferFrom(msg.sender, _to, _tokenId);
+        transNum[_tokenId]++;
+    }
+
+    /**
      * @notice The external function {approve} of the contract {ERC721} is banned in this contract.
      *
      * Note that any cards should keep their approval to `factory` at any time.
      */
-    function approve(address to, uint256 tokenId) public pure override(ICardSeries, ERC721, IERC721) {
+    function approve(address to, uint256 tokenId) public pure override(ERC721, IERC721) {
+        revert externalApproveBanned();
+    }
+
+    /**
+     * @notice The external function {setApprovalForAll} of the contract {ERC721} is banned in this contract.
+     *
+     * Note that any cards should keep their approval to `factory` at any time.
+     */
+    function setApprovalForAll(address operator, bool approved) public pure override(ERC721, IERC721) {
         revert externalApproveBanned();
     }
 
@@ -351,14 +375,14 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     /**
      * @notice Get the `name` of the current card series.
      */
-    function getCardName() public view returns (string memory) {
+    function name() public view override(ERC721) returns (string memory) {
         return cardName;
     }
 
     /**
      * @notice Get the `symbol` of the current card series.
      */
-    function getCardSymbol() public view returns (string memory) {
+    function symbol() public view override(ERC721) returns (string memory) {
         return cardSymbol;
     }
 
@@ -370,7 +394,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     }
 
     /**
-     * @notice Get the `cardBalance` of the current card series.
+     * @notice Get the `cardBalance` of the current card.
      */
     function getCardBalance(uint256 _tokenId) public view returns (uint256) {
         address cardOwner = ownerOf(_tokenId);
@@ -378,6 +402,13 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
             revert notCardOwner();
         }
         return cardBalance[_tokenId];
+    }
+
+    /**
+     * @notice Get the `transNum` of the card corresponding to the input `_tokenId`.
+     */
+    function getTransNum(uint256 _tokenId) public view returns (uint256) {
+        return transNum[_tokenId];
     }
 }
 ```
@@ -407,6 +438,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     uint256 private currentSupply;	// 会员套卡的当前总量
     uint256 public maxSupply;				// 会员套卡的最大发行量
     mapping(uint256 tokenId => uint256 tokenValue) public cardBalance;		// 单张会员卡的卡内余额
+    mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum; // 单张会员卡的交易数（转移次数）
     
     // 其他逻辑...
 }
@@ -430,6 +462,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     error notCardOwner();								// 错误：调用者非会员卡的持有者
     error uninitialized();							// 错误：合约未被初始化（即克隆的合约实例未执行`init`函数）
     error externalApproveBanned();			// 错误：ERC721 合约的 approve 函数被禁用（即不可调用此函数）
+    error invalidAddress(address inputAddr);  // 错误：输入的地址不适用于当前方法
     
     // 其他逻辑...
 }
@@ -588,14 +621,19 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 
 
 
-#### 1-9. 方法：禁用外部调用方法`approve`
+#### 1-9. 方法：禁用外部调用方法`approve`和`setApprovalForAll`
 
 ```solidity
 contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces {
 		// 其他逻辑...
 	
 		// 方法：禁用外部方法`approve`(所有`tokenId`对应的会员卡须全程授权给`factory`地址)
-		function approve(address to, uint256 tokenId) public pure override(ICardSeries, ERC721, IERC721) {
+		function approve(address to, uint256 tokenId) public pure override(ERC721, IERC721) {
+        revert externalApproveBanned();
+    }
+    
+    // 方法：禁用外部方法`setApprovalForAll`(所有`tokenId`对应的会员卡须全程授权给`factory`地址)
+    function setApprovalForAll(address operator, bool approved) public pure override(ERC721, IERC721) {
         revert externalApproveBanned();
     }
                 
@@ -605,7 +643,29 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 
 
 
-#### 1-10. 只读方法
+#### 1-10. 方法：执行会员卡转移
+
+```solidity
+contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces {
+		// 其他逻辑...
+	
+		// 方法：执行会员卡转移
+		function executeCardTransfer(address _to, uint256 _tokenId) public onlyFactory {
+        address cardOwner = ownerOf(_tokenId);				// 转移前，获取会员卡持有者地址
+        if (_to == cardOwner || _to == address(0)) {	// 检查：接收者地址是否为会员卡持有者或 0 地址
+            revert invalidAddress(_to);
+        }
+        safeTransferFrom(msg.sender, _to, _tokenId);	// 执行会员卡转移操作
+        transNum[_tokenId]++;				// 交易数 + 1
+    }
+                
+		// 其他逻辑...
+}
+```
+
+
+
+#### 1-11. 只读方法
 
 ```solidity
 contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces {
@@ -622,12 +682,12 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     }
 		
 		// 只读方法：获取当前会员套卡的名称
-    function getCardName() public view returns (string memory) {
+    function name() public view override(ERC721, IERC721Metadata) returns (string memory) {
         return cardName;
     }
 		
 		// 只读方法：获取当前会员套卡的标识
-    function getCardSymbol() public view returns (string memory) {
+    function symbol() public view override(ERC721, IERC721Metadata) returns (string memory) {
         return cardSymbol;
     }
 		
@@ -643,6 +703,11 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
             revert notCardOwner();
         }
         return cardBalance[_tokenId];
+    }
+    
+    // 只读方法：基于给定的`_tokenId`获取对应的单张会员卡的交易数
+    function getTransNum(uint256 _tokenId) public view returns (uint256) {
+        return transNum[_tokenId];
     }
 ```
 
@@ -778,7 +843,7 @@ interface ICardsFactory {
      *
      * Emits a {cardDelisted} event.
      *
-     * @dev Function Deprecated: The function for Listing cards is realized off-chain instead.
+     * @dev Function Deprecated: The function for delisting cards is realized off-chain instead.
      */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
 
