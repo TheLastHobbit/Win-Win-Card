@@ -1,4 +1,4 @@
-# XiJianChui WhitePaper
+# Win-Win Card WhitePaper
 
 #### 问题分析
 
