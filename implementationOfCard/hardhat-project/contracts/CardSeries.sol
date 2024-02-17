@@ -24,6 +24,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     uint256 public maxSupply;
     mapping(uint256 tokenId => uint256 tokenValue) public cardBalance;
     mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum;
+    mapping(uint256 tokenId => bytes32 data) public cardData;
 
     constructor() ERC721("XiJianChui", "XJC") {}
 
@@ -66,12 +67,17 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     /**
      * @notice Merchant mints a new card to `_to` with an originally stored value(count in token).
      *
+     * @param _to the recipient of the minted card
+     * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
+     * @param _value the amount of token stored in the card when it is minted
+     *
      * @return tokenId a unique ID of the card minted directly returned by internal function {_mintCard}.
      *
      * Note `tokenId` starts from 0 and ends at `maxSupply`.
      */
-    function mintCard(address _to, string memory _tokenURI, uint256 _value) external onlyFactory returns (uint256) {
-        return _mintCard(_to, _tokenURI, _value);
+    function mintCard(address _to, string calldata _tokenURI, uint256 _value, bytes32 _cardData) external onlyFactory returns (uint256) {
+        return _mintCard(_to, _tokenURI, _value, _cardData);
     }
 
     /**
@@ -82,19 +88,19 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
      * @param _MerkleProof a dynamic array which contains Merkle proof is used for validating the membership of the caller. This should be offered by the project party
      * @param _MerkleRoot the root of the Merkle tree of the whitelist
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the stored value inside the card which is claimed by its user
-     * @param _price the price of the card(use ERC20 tokens for pricing)
      */
     function validateCardClaim(
         bytes32[] calldata _MerkleProof,
         bytes32 _MerkleRoot,
         string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
+        bytes32 _cardData,
+        uint256 _storedValue
     ) external {
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _storedValue, _tokenURI, _price));
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _storedValue, _tokenURI, _cardData));
         _verifyMerkleProof(_MerkleProof, _MerkleRoot, leaf);
-        emit validatedForCardClaimed(_storedValue, _tokenURI, _price, msg.sender);
+        emit validatedForCardClaimed(_storedValue, _tokenURI, _cardData, msg.sender);
     }
 
     /**
@@ -170,7 +176,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     /**
      * @dev The internal function {_mintCard} realizes the basic logics of minting a new card.
      */
-    function _mintCard(address _to, string memory _tokenURI, uint256 _value) internal returns (uint256) {
+    function _mintCard(address _to, string memory _tokenURI, uint256 _value, bytes32 _cardData) internal returns (uint256) {
         if (currentSupply >= maxSupply) {
             revert reachMaxSupply();
         }
@@ -179,6 +185,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
         _setTokenURI(tokenId, _tokenURI);
         currentSupply++;
         cardBalance[tokenId] = _value;
+        cardData[tokenId] = _cardData;
         _approve(factory, tokenId, _to);
         return tokenId;
     }

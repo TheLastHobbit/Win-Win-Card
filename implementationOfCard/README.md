@@ -872,7 +872,7 @@ interface ICardsFactory {
      * @param _cardData a custom byte32 variable which indicate the properties of the card series
      * @param _storedValue the amount of the ERC20 token stored in the minted card.
      */
-    // function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
+    // function _mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
 
     /**
      * @notice Whitelist members claim their cards.
@@ -887,7 +887,7 @@ interface ICardsFactory {
      * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
      */
-    // function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
+    // function _cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
 
     /**
      * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
