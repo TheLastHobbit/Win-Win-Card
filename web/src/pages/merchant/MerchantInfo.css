@@ -1,0 +1,13 @@
+.merchant-info {
+  margin-left: 32px;
+}
+.merchant-info .info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.merchant-info .info-item .label {
+  font-weight: bold;
+  width: 120px;
+}
