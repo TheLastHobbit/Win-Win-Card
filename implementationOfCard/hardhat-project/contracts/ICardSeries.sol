@@ -5,7 +5,7 @@ interface ICardSeries {
     /**
      * @dev Emitted when a Merkle proof is validated successfully.
      */
-    event validatedForCardClaimed(uint256 storedValue, string tokenURI, uint256 price, address user);
+    event validatedForCardClaimed(uint256 storedValue, string tokenURI, bytes32 cardData, address user);
 
     /**
      * @dev Indicates a failure with `caller`. Used in checking if the caller equals `factory`.
@@ -58,11 +58,16 @@ interface ICardSeries {
     /**
      * @notice Merchant mints a new card to `_to` with an originally stored value(count in token).
      *
+     * @param _to the recipient of the minted card
+     * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
+     * @param _value the amount of token stored in the card when it is minted
+     *
      * @return tokenId a unique ID of the card minted directly returned by internal function {_mintCard}.
      *
      * Note `tokenId` starts from 0 and ends at `maxSupply`.
      */
-    function mintCard(address _to, string memory _tokenURI, uint256 _value) external returns (uint256);
+    function mintCard(address _to, string calldata _tokenURI, uint256 _value, bytes32 _cardData) external returns (uint256);
 
     /**
      * @notice To meet the demand of distributing cards to multiple users, the merchant can make a whitelist containing the member addresses and stored values inside the card.
@@ -72,10 +77,10 @@ interface ICardSeries {
      * @param _MerkleProof a dynamic array which contains Merkle proof is used for validating the membership of the caller. This should be offered by the project party
      * @param _MerkleRoot the root of the Merkle tree of the whitelist
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the stored value inside the card which is claimed by its user
-     * @param _price the price of the card(use ERC20 tokens for pricing)
      */
-    function validateCardClaim(bytes32[] calldata _MerkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    function validateCardClaim(bytes32[] calldata _MerkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
 
     /**
      * @notice When a specific card(specified by input '_tokenId') is assigned to be operated by calling this function with a signed message,

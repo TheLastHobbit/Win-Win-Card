@@ -131,51 +131,48 @@ contract CardsFactory is ICardsFactory, Ownable {
      *
      * @param _to the address of the recipient.
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of the ERC20 token stored in the minted card.
      */
-    function mintCard(
+    function _mintCard(
         uint256 _merchantId,
         uint256 _seriesId,
         address _to,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external onlyMerchant(_merchantId) {
+        string memory _tokenURI,
+        bytes32 _cardData,
+        uint256 _storedValue
+    ) internal onlyMerchant(_merchantId) {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
-        IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue, _cardData);
+        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue);
     }
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
-    function cardClaim(
+    function _cardClaim(
         uint256 _merchantId,
         uint256 _seriesId,
-        bytes32[] calldata _merkleProof,
+        bytes32[] memory _merkleProof,
         bytes32 _MerkleRoot,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external {
+        string memory _tokenURI,
+        bytes32 _cardData,
+        uint256 _storedValue
+    ) internal {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _storedValue, _price);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue);
-        IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue, _price);
+        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _cardData, _storedValue);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue, _cardData);
+        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue);
     }
 
     /**
