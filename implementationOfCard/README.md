@@ -37,7 +37,7 @@ interface ICardSeries {
     /**
      * @dev Emitted when a Merkle proof is validated successfully.
      */
-    event validatedForCardClaimed(uint256 storedValue, string tokenURI, uint256 price, address user);
+    event validatedForCardClaimed(uint256 storedValue, string tokenURI, bytes32 cardData, address user);
 
     /**
      * @dev Indicates a failure with `caller`. Used in checking if the caller equals `factory`.
@@ -90,11 +90,16 @@ interface ICardSeries {
     /**
      * @notice Merchant mints a new card to `_to` with an originally stored value(count in token).
      *
+     * @param _to the recipient of the minted card
+     * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
+     * @param _value the amount of token stored in the card when it is minted
+     *
      * @return tokenId a unique ID of the card minted directly returned by internal function {_mintCard}.
      *
      * Note `tokenId` starts from 0 and ends at `maxSupply`.
      */
-    function mintCard(address _to, string memory _tokenURI, uint256 _value) external returns (uint256);
+    function mintCard(address _to, string calldata _tokenURI, uint256 _value, bytes32 _cardData) external returns (uint256);
 
     /**
      * @notice To meet the demand of distributing cards to multiple users, the merchant can make a whitelist containing the member addresses and stored values inside the card.
@@ -104,10 +109,10 @@ interface ICardSeries {
      * @param _MerkleProof a dynamic array which contains Merkle proof is used for validating the membership of the caller. This should be offered by the project party
      * @param _MerkleRoot the root of the Merkle tree of the whitelist
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the stored value inside the card which is claimed by its user
-     * @param _price the price of the card(use ERC20 tokens for pricing)
      */
-    function validateCardClaim(bytes32[] calldata _MerkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    function validateCardClaim(bytes32[] calldata _MerkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
 
     /**
      * @notice When a specific card(specified by input '_tokenId') is assigned to be operated by calling this function with a signed message,
@@ -190,6 +195,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     uint256 public maxSupply;
     mapping(uint256 tokenId => uint256 tokenValue) public cardBalance;
     mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum;
+    mapping(uint256 tokenId => bytes32 data) public cardData;
 
     constructor() ERC721("XiJianChui", "XJC") {}
 
@@ -232,12 +238,17 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     /**
      * @notice Merchant mints a new card to `_to` with an originally stored value(count in token).
      *
+     * @param _to the recipient of the minted card
+     * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
+     * @param _value the amount of token stored in the card when it is minted
+     *
      * @return tokenId a unique ID of the card minted directly returned by internal function {_mintCard}.
      *
      * Note `tokenId` starts from 0 and ends at `maxSupply`.
      */
-    function mintCard(address _to, string memory _tokenURI, uint256 _value) external onlyFactory returns (uint256) {
-        return _mintCard(_to, _tokenURI, _value);
+    function mintCard(address _to, string calldata _tokenURI, uint256 _value, bytes32 _cardData) external onlyFactory returns (uint256) {
+        return _mintCard(_to, _tokenURI, _value, _cardData);
     }
 
     /**
@@ -248,19 +259,19 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
      * @param _MerkleProof a dynamic array which contains Merkle proof is used for validating the membership of the caller. This should be offered by the project party
      * @param _MerkleRoot the root of the Merkle tree of the whitelist
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the stored value inside the card which is claimed by its user
-     * @param _price the price of the card(use ERC20 tokens for pricing)
      */
     function validateCardClaim(
         bytes32[] calldata _MerkleProof,
         bytes32 _MerkleRoot,
         string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
+        bytes32 _cardData,
+        uint256 _storedValue
     ) external {
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _storedValue, _tokenURI, _price));
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _storedValue, _tokenURI, _cardData));
         _verifyMerkleProof(_MerkleProof, _MerkleRoot, leaf);
-        emit validatedForCardClaimed(_storedValue, _tokenURI, _price, msg.sender);
+        emit validatedForCardClaimed(_storedValue, _tokenURI, _cardData, msg.sender);
     }
 
     /**
@@ -336,7 +347,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     /**
      * @dev The internal function {_mintCard} realizes the basic logics of minting a new card.
      */
-    function _mintCard(address _to, string memory _tokenURI, uint256 _value) internal returns (uint256) {
+    function _mintCard(address _to, string memory _tokenURI, uint256 _value, bytes32 _cardData) internal returns (uint256) {
         if (currentSupply >= maxSupply) {
             revert reachMaxSupply();
         }
@@ -345,6 +356,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
         _setTokenURI(tokenId, _tokenURI);
         currentSupply++;
         cardBalance[tokenId] = _value;
+        cardData[tokenId] = _cardData;
         _approve(factory, tokenId, _to);
         return tokenId;
     }
@@ -439,6 +451,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     uint256 public maxSupply;				// 会员套卡的最大发行量
     mapping(uint256 tokenId => uint256 tokenValue) public cardBalance;		// 单张会员卡的卡内余额
     mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum; // 单张会员卡的交易数（转移次数）
+    mapping(uint256 tokenId => bytes32 data) public cardData;            // 单张会员卡内存储的自定义信息
     
     // 其他逻辑...
 }
@@ -453,7 +466,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 		// 其他逻辑...
 		
 		// 事件：若用户位于商家的白名单（以 Merkle tree 的形式构建）中，当用户被成功验证位于白名单中时触发该事件
-		event validatedForCardClaimed(uint256 storedValue, string tokenURI, uint256 price, address user);
+		event validatedForCardClaimed(uint256 storedValue, string tokenURI, bytes32 cardData, address user);
 		
     error notFactory(address caller);		// 错误：调用者非工厂合约地址
     error invalidSignature(address derivedSigner, address validSigner);		// 错误：链下签名验证失败
@@ -533,12 +546,12 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 		// 其他逻辑...
 	
 	// 方法：铸造新的单张会员卡
-		function mintCard(address _to, string memory _tokenURI, uint256 _value) external onlyFactory returns (uint256) {
-        return _mintCard(_to, _tokenURI, _value);
+		function mintCard(address _to, string calldata _tokenURI, uint256 _value, bytes32 _cardData) external onlyFactory returns (uint256) {
+        return _mintCard(_to, _tokenURI, _value, _cardData);
     }
     
   // （内部）方法：实现“铸造新的单张会员卡的逻辑”
-		function _mintCard(address _to, string memory _tokenURI, uint256 _value) internal returns (uint256) {
+		function _mintCard(address _to, string memory _tokenURI, uint256 _value, bytes32 _cardData) internal returns (uint256) {
         if (currentSupply >= maxSupply) {							// 检查：会员套卡的当前总量是否达到最大发行量
             revert reachMaxSupply();
         }
@@ -547,10 +560,11 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
         _setTokenURI(tokenId, _tokenURI);							// 设定会员卡的存储信息（字符串）
         currentSupply++;															// 会员套卡的当前总量 + 1
         cardBalance[tokenId] = _value;								// 设定会员卡的储值
+        cardData[tokenId] = _cardData;                // 设定会员卡内的自定义信息
         _approve(factory, tokenId, _to);							// 为工厂合约授权（应一直保证会员卡对工厂合约的授权）
         return tokenId;
     }
-        
+
 		// 其他逻辑...
 }
 ```
@@ -568,14 +582,14 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
         bytes32[] calldata _MerkleProof,
         bytes32 _MerkleRoot,
         string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
+        bytes32 _cardData,
+        uint256 _storedValue
     ) external {
     		// 打包用户所输入的证明信息
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _storedValue, _tokenURI, _price));
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _storedValue, _tokenURI, _cardData));
         // （内部）方法：执行验证
         _verifyMerkleProof(_merkleProof, _MerkleRoot, leaf);
-        emit validatedForCardClaimed(_storedValue, _tokenURI, _price, msg.sender);
+        emit validatedForCardClaimed(_storedValue, _tokenURI, _cardData, msg.sender);
     }
         
 		// 其他逻辑...
@@ -754,8 +768,7 @@ interface ICardsFactory {
         uint256 seriesId,
         address indexed recipient,
         uint256 indexed tokenId,
-        uint256 storedValue,
-        uint256 indexed price
+        uint256 indexed storedValue
     );
 
     /**
@@ -852,24 +865,29 @@ interface ICardsFactory {
      *
      * Emits a {cardMinted} event.
      *
+     * Interface Deprecated: The visibility of this function is modified to `internal`.
+     *
      * @param _to the address of the recipient.
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom byte32 variable which indicate the properties of the card series
      * @param _storedValue the amount of the ERC20 token stored in the minted card.
      */
-    function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    // function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
+     *
+     * Interface Deprecated: The visibility of this function is modified to `internal`.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
-    function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    // function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
 
     /**
      * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
@@ -1109,51 +1127,48 @@ contract CardsFactory is ICardsFactory, Ownable {
      *
      * @param _to the address of the recipient.
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of the ERC20 token stored in the minted card.
      */
-    function mintCard(
+    function _mintCard(
         uint256 _merchantId,
         uint256 _seriesId,
         address _to,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external onlyMerchant(_merchantId) {
+        string memory _tokenURI,
+        bytes32 _cardData,
+        uint256 _storedValue
+    ) internal onlyMerchant(_merchantId) {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
-        IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue, _cardData);
+        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue);
     }
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
-    function cardClaim(
+    function _cardClaim(
         uint256 _merchantId,
         uint256 _seriesId,
-        bytes32[] calldata _merkleProof,
+        bytes32[] memory _merkleProof,
         bytes32 _MerkleRoot,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external {
+        string memory _tokenURI,
+        bytes32 _cardData,
+        uint256 _storedValue
+    ) internal {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _storedValue, _price);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue);
-        IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue, _price);
+        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _cardData, _storedValue);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue, _cardData);
+        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue);
     }
 
     /**
@@ -1415,8 +1430,7 @@ contract CardsFactory is ICardsFactory, Ownable {
         uint256 seriesId,
         address indexed recipient,
         uint256 indexed tokenId,
-        uint256 storedValue,
-        uint256 indexed price
+        uint256 indexed storedValue
     );
 
 		// 事件（废弃）：当某个单张会员卡被持有者上架售卖时，触发该事件
@@ -1543,7 +1557,7 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-7. 方法：铸造新的单张会员卡
+#### 1-7. （内部）方法：铸造新的单张会员卡
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
@@ -1551,22 +1565,19 @@ contract CardsFactory is ICardsFactory, Ownable {
 		
 		// 铸造新的会员卡
 		// 函数修饰符`onlyMerchant`限定：仅商家可以调用该方法
-		function mintCard(
+		function _mintCard(
         uint256 _merchantId,
         uint256 _seriesId,
         address _to,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external onlyMerchant(_merchantId) {
+        string memory _tokenURI,
+        bytes32 _cardData,
+        uint256 _storedValue
+    ) internal onlyMerchant(_merchantId) {
         _checkCardSeries(_merchantId, _seriesId);					// （内部）方法：检查输入的商家ID和会员套卡ID是否均存在
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);		// 获取会员套卡的合约地址
         // 执行铸造新卡的动作并获取其返回值：tokenId
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
-        // 执行 ERC-20 token 的转移动作：买家为商家付款购买此会员卡
-        IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
-        merchantBalance[_merchantId] += _price;									  // 商家在 Dapp 中的余额增加对应的 token 数额
-        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue, _cardData);
+        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue);
     }
 		
 		// 其他逻辑...
@@ -1575,32 +1586,29 @@ contract CardsFactory is ICardsFactory, Ownable {
 
 
 
-#### 1-8. 方法：白名单用户领取会员卡
+#### 1-8. （内部）方法：白名单用户领取会员卡
 
 ```solidity
 contract CardsFactory is ICardsFactory, Ownable {
 		// 其他逻辑...
 		
 		// 若商家采用 Merkle Tree 构建用户白名单并开放用户领取会员卡，则用户可以调用该方法获取对应的会员卡
-		function cardClaim(
+		function _cardClaim(
         uint256 _merchantId,
         uint256 _seriesId,
-        bytes32[] calldata _merkleProof,
+        bytes32[] memory _merkleProof,
         bytes32 _MerkleRoot,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external {
+        string memory _tokenURI,
+        bytes32 _cardData,
+        uint256 _storedValue
+    ) internal {
         _checkCardSeries(_merchantId, _seriesId);					// （内部）方法：检查输入的商家ID和会员套卡ID是否均存在
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);		// 获取会员套卡的合约地址
         // 通过会员套卡合约验证用户所输入的信息、Merkle proof 和 Merkle root 是否匹配，以验证调用者是否在白名单中
-        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _storedValue, _price);
+        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _cardData, _storedValue);
         // 执行铸造新卡的动作并获取其返回值：tokenId
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue);
-        // 执行 ERC-20 token 的转移动作：买家为商家付款购买此会员卡
-        IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
-        merchantBalance[_merchantId] += _price;									  // 商家在 Dapp 中的余额增加对应的 token 数额
-        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue, _price);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue, _cardData);
+        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue);
     }
 		
 		// 其他逻辑...
