@@ -53,8 +53,7 @@ interface ICardsFactory {
         uint256 seriesId,
         address indexed recipient,
         uint256 indexed tokenId,
-        uint256 storedValue,
-        uint256 indexed price
+        uint256 indexed storedValue
     );
 
     /**
@@ -151,24 +150,29 @@ interface ICardsFactory {
      *
      * Emits a {cardMinted} event.
      *
+     * Interface Deprecated: The visibility of this function is modified to `internal`.
+     *
      * @param _to the address of the recipient.
      * @param _tokenURI a custom string which is stored in the card
+     * @param _cardData a custom byte32 variable which indicate the properties of the card series
      * @param _storedValue the amount of the ERC20 token stored in the minted card.
      */
-    function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    // function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
+     *
+     * Interface Deprecated: The visibility of this function is modified to `internal`.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
-    function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    // function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) external;
 
     /**
      * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
@@ -290,7 +294,7 @@ interface ICardsFactory {
 
 
 
-### 2. 商家方法：铸造新的单张会员卡
+### 2. [ *废弃方法：改为内部函数，转由`cardMarket`合约实现该功能* ] 商家方法：铸造新的单张会员卡
 
 ```solidity
 		/**
@@ -303,7 +307,7 @@ interface ICardsFactory {
 		 * @param _storedValue：铸造时存储的金额（由商家根据业务需要自行确定）
 		 * @param _price: 用户为新铸造的会员卡所需的付款（由商家根据业务需要自行确定）
 		 */
-		function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+		// function _mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
 ```
 
 
@@ -380,7 +384,7 @@ interface ICardsFactory {
 
 
 
-### 2. 通用方法：白名单用户领取会员卡
+### 2. [ *废弃方法：改为内部函数，转由`cardMarket`合约实现该功能* ]  通用方法：白名单用户领取会员卡
 
 ```solidity
 		/**
@@ -394,7 +398,7 @@ interface ICardsFactory {
 		 * @param _storedValue: 铸造时存储的金额（是 merkle tree 该用户节点的信息之一）
 		 * @param _price: 领取会员卡相应支付的价格（买卡所需付给卖家的 token 数额，是 merkle tree 该用户节点的信息之一）
 		 */
-		function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+		    // function _cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
 ```
 
 
