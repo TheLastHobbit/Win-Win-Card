@@ -133,21 +133,21 @@ contract CardsFactory is ICardsFactory, Ownable {
      * @param _tokenURI a custom string which is stored in the card
      * @param _storedValue the amount of the ERC20 token stored in the minted card.
      */
-    function mintCard(
-        uint256 _merchantId,
-        uint256 _seriesId,
-        address _to,
-        string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external onlyMerchant(_merchantId) {
-        _checkCardSeries(_merchantId, _seriesId);
-        address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
-        IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
-    }
+    // function _mintCard(
+    //     uint256 _merchantId,
+    //     uint256 _seriesId,
+    //     address _to,
+    //     string calldata _tokenURI,
+    //     uint256 _storedValue,
+    //     uint256 _price
+    // ) internal  {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
+    //     uint256 tokenId = ICardSeries(contractAddress).mintCard(address(this), _tokenURI, _storedValue);
+    //     // IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
+    //     // merchantBalance[_merchantId] += _price;
+    //     // emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
+    // }
 
     /**
      * @notice Whitelist members can claim their cards by calling {cardClaim}.
