@@ -222,7 +222,7 @@ contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
         emit userWithdrawal(msg.sender, _amount);
     }
 
-    function getMerchantsId() public returns(uint256){
+    function getMerchantsId() public view returns(uint256){
         address account = msg.sender;
         console.log("account",account);
         return latestMerchantId[account];
