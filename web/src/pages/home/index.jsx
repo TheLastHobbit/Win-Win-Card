@@ -2,11 +2,23 @@ import { Link } from 'react-router-dom'
 import { Card, Space, Button } from 'antd';
 import './home.css';
 import Profile from 'components/profile';
+import { checkRegisteredMerchant } from '../../utils/Market'
+import { useEffect } from 'react';
+import { useAccount, useReadContracts, useSignTypedData } from 'wagmi'
 
 const HomePage = () => {
   const onHandleCard =(type) => {
 
   }
+  const { address: account  } = useAccount()
+
+
+  useEffect(() => {
+    checkRegisteredMerchant(account).then((res) => {
+      console.log('checkRegisteredMerchant', res);
+    })
+  }, [account])
+
 
   return(
     <div className='home'>
