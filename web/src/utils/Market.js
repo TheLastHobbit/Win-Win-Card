@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import ABI from '../contracts/Market.json';
 
 let provider = new ethers.BrowserProvider(window.ethereum)
-const contractAddress = "0xCF14278d799431dd31261019af422A1A2Aa5B75D";
+const contractAddress = "0xEC1217e6EA61f6AD6DD3E2025771243246A65D47";
 const contract = new ethers.Contract(contractAddress, ABI, await provider.getSigner());
 
 // payable方法

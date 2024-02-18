@@ -169,7 +169,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
 
         address signer = ECDSA.recover(hash, _v, _r, _s);
         if (signer != cardOwner) {
-            revert invalidSignature(signer, cardOwner);
+            revert Unapproved(signer, cardOwner);
         }
         return true;
     }
