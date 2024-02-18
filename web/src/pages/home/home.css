@@ -1,3 +1,32 @@
+.home {
+  min-height: 500px;
+}
 .home-content {
   padding: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.home-title{
+  font-weight: bold;
+  text-align: center;
+  margin-top: 60px;
+  margin-bottom: 120px;
+  color: #fff;
+}
+.about-us {
+  text-align: center;
+  color: #999;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 180px;
+}
+.about-us:hover {
+  color: #fff;
+}
+.entry-button {
+  width: 160px;
+  height: 60px;
+  font-size: 22px;
 }

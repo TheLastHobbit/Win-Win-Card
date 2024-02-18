@@ -30,12 +30,10 @@ interface ICardsFactory {
      * @dev Emitted when a card of a specific `seriesId` of a merchant is minted.
      */
     event cardMinted(
-        uint256 merchantId,
+        uint256 indexed merchantId,
         uint256 seriesId,
         address indexed recipient,
-        uint256 indexed tokenId,
-        uint256 storedValue,
-        uint256 indexed price
+        uint256 indexed tokenId
     );
 
     /**
@@ -61,6 +59,11 @@ interface ICardsFactory {
      * @dev Emitted when a member of a specific merchant withdraw the balance of the merchant by calling {merchantWithdraw}.
      */
     event merchantWithdrawal(uint256 merchantId, address withdrawer, uint256 withdrawnValue);
+
+    /**
+     * @dev Emited when a user deposits AVAX.
+     */
+    event depositedAVAX(address user, uint256 value);
 
     /**
      * @dev Indicates a failure with `merchantId` and the function `caller`. Used to check if `caller` is the member of the merchant of `merchantId`.
@@ -128,28 +131,39 @@ interface ICardsFactory {
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
 
     /**
+     * @notice User deposits AVAX to this contract.
+     *
+     * Emit a {depositedAVAX} event.
+     */
+    function depositAVAX() external payable;
+
+    /**
      * @notice Mint a new card by the corresponding merchant.
      *
      * Emits a {cardMinted} event.
      *
-     * @param _to the address of the recipient.
+     * @param _to the address of the recipient which should pay AVAX for the minted card
      * @param _tokenURI a custom string which is stored in the card
-     * @param _storedValue the amount of the ERC20 token stored in the minted card.
+     * @param _price the value of AVAX in exchange for the minted card
+     * @param _deadline the timestamp of the expiration of the off-chain signed message
+     * @param _signature the signed message containing merchantId, seriesId and price
      */
-    function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    function mintCard(uint256 _merchantId, uint256 _seriesId, address payable _to, string calldata _tokenURI, uint256 _price, uint256 _deadline, bytes memory _signature) external payable;
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
+     *
+     * Interface Deprecated: The visibility of this function is modified to `internal`.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
-    function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    // function _cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
 
     /**
      * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
@@ -234,6 +248,16 @@ interface ICardsFactory {
      * @notice Get the contract address of the card series based on the given `_merchantId` and `_seriesId`.
      */
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) external view returns (address);
+
+    /**
+     * @notice Get the deposited amount of AVAX in this contract.
+     */
+    function getAVAXDeposited(address _user) external view returns (uint256);
+
+    /**
+     * @notice Check if `_account` is a member of a merchant.
+     */
+    function checkIfRegisteredMerchant(address _account) external view returns (bool);
 
     /**
      * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.

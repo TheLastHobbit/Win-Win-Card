@@ -1,0 +1,13 @@
+.card-box {
+  display: flex;
+  align-items: center;
+  padding: 32px;
+}
+.info-item {
+  display: flex;
+  margin-bottom: 12px;
+}
+.info-item .label {
+  font-weight: bold;
+  margin-right: 12px;
+}
