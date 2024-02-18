@@ -12,17 +12,19 @@ import {console} from "forge-std/console.sol";
 
 import {wUSDT} from "./erc20-usdt.sol";
 
+import "./CardsFactory.sol";
+
 /**
  * @title NFTMarket contract that allows atomic swaps of ERC20 and ERC721
  */
-contract CardMarket is EIP712, Nonces {
+contract CardMarket is EIP712, Nonces,CardsFactory{
     using ECDSA for bytes32;
     bytes32 private constant EIP712DOMAIN_TYPEHASH =
         keccak256(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
         );
-    bytes32 private constant STORAGE_TYPEHASH =
-        keccak256("Storage(address owner,uint256 price,uint256 id)");
+    bytes32 private constant STORAGE_TYPEHASH1 =
+        keccak256("Storage(address owner,address cardAddr,uint256 price,uint256 id)");
     bytes32 private DOMAIN_SEPARATOR;
 
     address public erc20;
@@ -86,13 +88,11 @@ contract CardMarket is EIP712, Nonces {
         console.log("TransAware:", awareAmount);
         emit chargeEvent(shopAddr, charge);
         emit Deal(seller, buyer, _id, _price, _CardAddr);
-        
     }
-
     function permitStore(
         address owner,
-        address NFTAddress,
-        uint256 NFTid,
+        address cardAddr,
+        uint256 NFTid,vbn 
         uint256 price,
         bytes memory _signature
     ) public {
@@ -107,7 +107,7 @@ contract CardMarket is EIP712, Nonces {
             前32 bytes存储签名的长度 (动态数组存储规则)
             add(sig, 32) = sig的指针 + 32
             等效为略过signature的前32 bytes
-            mload(p) 载入从内存地址p起始的接下来32 bytes数据
+            mload(p) 载入从内存地址p起始的接下来32bytes数据
             */
             // 读取长度数据后的32 bytes
             r := mload(add(_signature, 0x20))
@@ -121,15 +121,14 @@ contract CardMarket is EIP712, Nonces {
             abi.encodePacked(
                 "\x19\x01",
                 DOMAIN_SEPARATOR,
-                keccak256(abi.encode(STORAGE_TYPEHASH, owner, price, NFTAddress,NFTid))
+                keccak256(abi.encode(STORAGE_TYPEHASH1, owner,cardAddr, price,NFTid))
             )
         );
         address signer = digest.recover(v, r, s); // 恢复签名者
         require(signer == owner, "EIP712Storage: Invalid signature"); // 检查签名
 
-        emit verify(msg.sender,NFTAddress,NFTid,price,_signature);
+        emit verify(msg.sender,cardAddr,NFTid,price,_signature);
     }
-
 
     function permitListbuy(
         address payable seller,

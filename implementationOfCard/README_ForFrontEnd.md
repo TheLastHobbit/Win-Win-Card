@@ -49,12 +49,10 @@ interface ICardsFactory {
      * @dev Emitted when a card of a specific `seriesId` of a merchant is minted.
      */
     event cardMinted(
-        uint256 merchantId,
+        uint256 indexed merchantId,
         uint256 seriesId,
         address indexed recipient,
-        uint256 indexed tokenId,
-        uint256 storedValue,
-        uint256 indexed price
+        uint256 indexed tokenId
     );
 
     /**
@@ -80,6 +78,11 @@ interface ICardsFactory {
      * @dev Emitted when a member of a specific merchant withdraw the balance of the merchant by calling {merchantWithdraw}.
      */
     event merchantWithdrawal(uint256 merchantId, address withdrawer, uint256 withdrawnValue);
+
+    /**
+     * @dev Emited when a user deposits AVAX.
+     */
+    event depositedAVAX(address user, uint256 value);
 
     /**
      * @dev Indicates a failure with `merchantId` and the function `caller`. Used to check if `caller` is the member of the merchant of `merchantId`.
@@ -147,28 +150,39 @@ interface ICardsFactory {
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
 
     /**
+     * @notice User deposits AVAX to this contract.
+     *
+     * Emit a {depositedAVAX} event.
+     */
+    function depositAVAX() external payable;
+
+    /**
      * @notice Mint a new card by the corresponding merchant.
      *
      * Emits a {cardMinted} event.
      *
-     * @param _to the address of the recipient.
+     * @param _to the address of the recipient which should pay AVAX for the minted card
      * @param _tokenURI a custom string which is stored in the card
-     * @param _storedValue the amount of the ERC20 token stored in the minted card.
+     * @param _price the value of AVAX in exchange for the minted card
+     * @param _deadline the timestamp of the expiration of the off-chain signed message
+     * @param _signature the signed message containing merchantId, seriesId and price
      */
-    function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    function mintCard(uint256 _merchantId, uint256 _seriesId, address payable _to, string calldata _tokenURI, uint256 _price, uint256 _deadline, bytes memory _signature) external payable;
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
+     *
+     * Interface Deprecated: The visibility of this function is modified to `internal`.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
+     * @param _cardData a custom bytes32 variable which indicate the properties of the card series
      * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
-    function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+    // function _cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
 
     /**
      * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
@@ -255,6 +269,16 @@ interface ICardsFactory {
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) external view returns (address);
 
     /**
+     * @notice Get the deposited amount of AVAX in this contract.
+     */
+    function getAVAXDeposited(address _user) external view returns (uint256);
+
+    /**
+     * @notice Check if `_account` is a member of a merchant.
+     */
+    function checkIfRegisteredMerchant(address _account) external view returns (bool);
+
+    /**
      * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
      *
      * @notice Get the current price of the card listed for sale.
@@ -298,12 +322,13 @@ interface ICardsFactory {
 		 *
 		 * @param _merchantId: 商家ID（商家唯一标识符）
 		 * @param _seriesId：会员套卡ID（会员套卡唯一标识符）
-		 * @param _to：接收会员卡的用户（即铸造给谁）
+		 * @param _to：接收会员卡的用户（即铸造给谁, 也是付款买卡的用户）
 		 * @param _tokenURI：会员卡存储的自定义字符串（即 NFT的 IPFS 链接，作为会员卡的卡面）
-		 * @param _storedValue：铸造时存储的金额（由商家根据业务需要自行确定）
 		 * @param _price: 用户为新铸造的会员卡所需的付款（由商家根据业务需要自行确定）
+		 * @param _deadline: 离线签名的有效期
+		 * @param _signature：接收会员卡的用户的签名（用于限定"哪个商家"调取"合约内用户存储的AVAX的数额"等关键信息）
 		 */
-		function mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
+		function mintCard(uint256 _merchantId, uint256 _seriesId, address payable _to, string calldata _tokenURI, uint256 _price, uint256 _deadline, bytes memory _signature) external payable;
 ```
 
 
@@ -380,26 +405,7 @@ interface ICardsFactory {
 
 
 
-### 2. 通用方法：白名单用户领取会员卡
-
-```solidity
-		/**
-		 * @dev 若商家采用 Merkle Tree 构建用户白名单并开放用户领取会员卡，则用户可以调用该方法获取对应的会员卡
-		 *
-		 * @param _merchantId: 商家ID（商家唯一标识符）
-		 * @param _seriesId: 会员套卡ID（会员套卡唯一标识符）
-		 * @param _merkleProof: 调用者对应的 Merkle Proof（通过商家的后端返回）
-		 * @param _MerkleRoot: Merkle Root（由商家提供该值）
-		 * @param _tokenURI: 会员卡存储的自定义字符串（即 NFT的 IPFS 链接，作为会员卡的卡面，是 merkle tree 该用户节点的信息之一）
-		 * @param _storedValue: 铸造时存储的金额（是 merkle tree 该用户节点的信息之一）
-		 * @param _price: 领取会员卡相应支付的价格（买卡所需付给卖家的 token 数额，是 merkle tree 该用户节点的信息之一）
-		 */
-		function cardClaim(uint256 _merchantId, uint256 _seriesId, bytes32[] calldata _merkleProof, bytes32 _MerkleRoot, string calldata _tokenURI, uint256 _storedValue, uint256 _price) external;
-```
-
-
-
-### 3. 通用方法：用户从 Dapp 中提取个人账户的金额（ERC20 token）
+### 2. 通用方法：用户从 Dapp 中提取个人账户的金额（ERC20 token）
 
 ```solidity
 		/**
@@ -408,6 +414,17 @@ interface ICardsFactory {
 		 * @param _amount: 用户从 Dapp 个人账户中提取的金额
 		 */
 		function userWithdraw(uint256 _amount) external;
+```
+
+
+
+### 3. 通用方法：用户向合约中存入 AVAX
+
+```solidity
+		/**
+     * @notice 用户向合约中存入 AVAX
+     */
+    function depositAVAX() external payable;
 ```
 
 
@@ -496,4 +513,30 @@ interface ICardsFactory {
 		 * @return 会员套卡的合约地址
 		 */
 		function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) external view returns (address);
+```
+
+
+
+### 10. 通用方法（只读）：获取用户在合约内存入的AVAX数量
+
+```solidity
+		/**
+     * @notice 获取用户`_user`存入的 AVAX 数量
+     *
+     * @return 用户在合约中的 AVAX 余额
+     */
+    function getAVAXDeposited(address _user) external view returns (uint256);
+```
+
+
+
+### 11. 通用方法（只读）：检测某地址是否注册过商家
+
+```solidity
+		/**
+     * @notice 检测某地址是否注册过商家
+     *
+     * @return 返回结果（若该地址为商家，则返回 true）
+     */
+    function checkIfRegisteredMerchant(address _account) external view returns (bool);
 ```

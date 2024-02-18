@@ -8,13 +8,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title This is a factory contract that clones the implementation contracts of membership cards.
  *
  * @dev Implementation of the {ICardsFactory} interface.
  */
-contract CardsFactory is ICardsFactory, Ownable {
+contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard, Nonces {
     using Clones for address;
     using SafeERC20 for IERC20;
 
@@ -38,6 +41,8 @@ contract CardsFactory is ICardsFactory, Ownable {
     mapping(uint256 merchantId => mapping(uint256 seriesId => SeriesStruct)) public seriesInfo;
     mapping(address user => uint256 privateBalance) private userBalance;
     mapping(uint256 merchantId => uint256 earnedValue) private merchantBalance;
+    mapping(address user => uint256 AVAXBalance) internal AVAXDeposited;
+    mapping(address account => uint256 merchantId) internal latestMerchantId;
     // State Variable Deprecated: The function related to this variable has been banned because listing and delisting has been realized off-chain instead.
     // mapping(uint256 merchantId => mapping(uint256 _seriesId => mapping(uint256 _tokenId => uint256 cardPrice))) public price;
 
@@ -125,40 +130,62 @@ contract CardsFactory is ICardsFactory, Ownable {
     // }
 
     /**
+     * @dev when user deposits AVAX to this contract directly without calling any functions, {receive} will be called.
+     *
+     * Emit a {depositedAVAX} event.
+     */
+    receive() external payable {
+        AVAXDeposited[msg.sender] += msg.value;
+        emit depositedAVAX(msg.sender, msg.value);
+    }
+
+    /**
+     * @notice User deposits AVAX to this contract.
+     *
+     * Emit a {depositedAVAX} event.
+     */
+    function depositAVAX() public payable {
+        AVAXDeposited[msg.sender] += msg.value;
+        emit depositedAVAX(msg.sender, msg.value);
+    }
+
+    /**
      * @notice Mint a new card by the corresponding merchant.
      *
      * Emits a {cardMinted} event.
      *
-     * @param _to the address of the recipient.
+     * @param _to the address of the recipient which should pay AVAX for the minted card
      * @param _tokenURI a custom string which is stored in the card
-     * @param _storedValue the amount of the ERC20 token stored in the minted card.
+     * @param _price the value of AVAX in exchange for the minted card
+     * @param _deadline the timestamp of the expiration of the off-chain signed message
+     * @param _signature the signed message containing merchantId, seriesId and price
      */
     function mintCard(
         uint256 _merchantId,
         uint256 _seriesId,
-        address _to,
+        address payable _to,
         string calldata _tokenURI,
-        uint256 _storedValue,
-        uint256 _price
-    ) external onlyMerchant(_merchantId) {
+        uint256 _price,
+        uint256 _deadline,
+        bytes memory _signature
+    ) external onlyMerchant(_merchantId) nonReentrant payable {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI, _storedValue);
-        IERC20(tokenAddress).safeTransferFrom(_to, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, _to, tokenId, _storedValue, _price);
+        bytes32 hash = ICardSeries(contractAddress).permitForMint_buildHash(_to, _merchantId, _seriesId, _price, _deadline);
+        ICardSeries(contractAddress).permitForMint_validateSig(_to, hash, _signature);
+        _handleAVAXTransfer_MintCard(_merchantId, _to, _price);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(_to, _tokenURI);
+        emit cardMinted(_merchantId, _seriesId, _to, tokenId);
     }
 
     /**
-     * @notice Whitelist members can claim their cards by calling {cardClaim}.
+     * @notice Whitelist members claim their cards.
      *
      * Emits a {cardMinted} event.
      *
      * @param _merkleProof the proof offered by the merchant with a given account(address)
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
-     * @param _storedValue the amount of token stored in the card minted
-     * @param _price the amount of token in exchange for the card minted
      */
     function cardClaim(
         uint256 _merchantId,
@@ -166,16 +193,15 @@ contract CardsFactory is ICardsFactory, Ownable {
         bytes32[] calldata _merkleProof,
         bytes32 _MerkleRoot,
         string calldata _tokenURI,
-        uint256 _storedValue,
         uint256 _price
     ) external {
         _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI, _storedValue, _price);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI, _storedValue);
+        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI);
+        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI);
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
         merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId, _storedValue, _price);
+        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId);   
     }
 
     /**
@@ -223,6 +249,7 @@ contract CardsFactory is ICardsFactory, Ownable {
     function merchantRegistration() public {
         uint256 newMerchantId = ++merchantNumber;
         merchantMembership[msg.sender][newMerchantId] = true;
+        latestMerchantId[msg.sender] = newMerchantId;
         emit merchantRegistered(msg.sender, merchantNumber);
     }
 
@@ -258,6 +285,14 @@ contract CardsFactory is ICardsFactory, Ownable {
         }
         merchantMembership[_member][_merchantId] = false;
         emit merchantMemberRemoved(_merchantId, _member);
+    }
+    
+    function _handleAVAXTransfer_MintCard(uint256 _merchantId, address payable _to, uint256 _price) internal {
+        require(AVAXDeposited[_to] >= _price, "Insufficient AVAX balance");
+        (bool success, ) = msg.sender.call{value: _price}("");
+        require(success, "Fail to transfer AVAX");
+        AVAXDeposited[_to] -= _price;
+        merchantBalance[_merchantId] += _price;
     }
 
     /**
@@ -338,9 +373,23 @@ contract CardsFactory is ICardsFactory, Ownable {
      * @notice Get the contract address of the card series based on the given `_merchantId` and `_seriesId`.
      */
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) public view returns (address) {
-        _checkCardSeries(_merchantId, _seriesId);
         address contractAddress = seriesInfo[_merchantId][_seriesId].contractAddr;
         return contractAddress;
+    }
+
+    /**
+     * @notice Get the deposited amount of AVAX in this contract.
+     */
+    function getAVAXDeposited(address _user) public view returns (uint256) {
+        return AVAXDeposited[_user];
+    }
+
+    /**
+     * @notice Check if `_account` is a member of a merchant.
+     */
+    function checkIfRegisteredMerchant(address _account) public view returns (bool) {
+        bool isAMerchant = latestMerchantId[_account] != 0 ? true : false;
+        return isAMerchant;
     }
 
     /**
