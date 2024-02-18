@@ -1,0 +1,9 @@
+.merchant-box {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+  padding-top: 120px;
+}
+.deploy-my-card {
+  width: 360px;
+}
