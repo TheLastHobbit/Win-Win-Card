@@ -13,15 +13,13 @@ interface ICardSeries {
     error notFactory(address caller);
 
     /**
-     * @dev Indicates a failure with `derivedSigner` and `validSigner`. Used in checking if the signer of a signed message equals the expected address.
+     * @dev Indicates a failure with `currentTimestamp` and `deadline`. Used in checking if a signature of a signed message out is expired.
      */
-    error invalidSignature(address derivedSigner, address validSigner);
+    error expiredSignature(uint256 currentTimestamp, uint256 deadline);
 
     /**
-     * @dev Indicates a failure with `currendTimestamp` and `deadline`. Used in checking if a signature of a signed message out is expired.
+     * @dev Indicates a failure with the signer derived from a signature and the valid signer. Used in signature validation.
      */
-    error expiredSignature(uint256 currendTimestamp, uint256 deadline);
-
     error Unapproved(address derivedSigner, address validSigner);
 
     /**
