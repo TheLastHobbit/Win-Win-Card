@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import ABI from '../contracts/Market.json';
 
 let provider = new ethers.BrowserProvider(window.ethereum)
-const contractAddress = "0xEC1217e6EA61f6AD6DD3E2025771243246A65D47";
+const contractAddress = "0x8Fa2DA0F0982303701272cdc6b491b5C6C99705f";
 const contract = new ethers.Contract(contractAddress, ABI, await provider.getSigner());
 
 // payable方法
@@ -35,8 +35,9 @@ export async function checkRegisteredMerchant(_account) {
 
 //商家注册函数
 export async function MerchantRegistration() {
-    contract.merchantRegistration();
-    console.log("merchantRegistration success!")
+   const merchantId = contract.merchantRegistration();
+   console.log("merchantRegistration success!")
+   return merchantId;
 }
 
 export async function getAddrMerchantId(){

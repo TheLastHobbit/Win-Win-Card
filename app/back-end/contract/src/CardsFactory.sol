@@ -254,10 +254,12 @@ contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
      *
      * @dev The state variable `merchantNumber` starts from 1. And it also figures out how many merchants have registered on this platform.
      */
-    function merchantRegistration() public {
+    function merchantRegistration() public returns(uint256){
         uint256 newMerchantId = ++merchantNumber;
         merchantMembership[msg.sender][newMerchantId] = true;
         latestMerchantId[msg.sender] = newMerchantId;
+        console.log("newMerchantId:",newMerchantId);
+        return newMerchantId;
         emit merchantRegistered(msg.sender, merchantNumber);
     }
 

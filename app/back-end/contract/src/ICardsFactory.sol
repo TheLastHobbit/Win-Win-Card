@@ -191,7 +191,7 @@ interface ICardsFactory {
      *
      * @dev The state variable `merchantNumber` starts from 1. And it also figures out how many merchants have registered on this platform.
      */
-    function merchantRegistration() external;
+    function merchantRegistration() external returns(uint256);
 
     /**
      * @notice This function is used to add a member to a merchant(identified by `merchantId`).
