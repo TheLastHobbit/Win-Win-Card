@@ -39,4 +39,9 @@ export async function MerchantRegistration() {
     console.log("merchantRegistration success!")
 }
 
+export async function getAddrMerchantId(){
+    const merchantid = contract.getMerchantsId();
+    return merchantid;
+}
+
 

@@ -222,6 +222,13 @@ contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
         emit userWithdrawal(msg.sender, _amount);
     }
 
+    function getMerchantsId() public returns(uint256){
+        address account = msg.sender;
+        console.log("account",account);
+        return latestMerchantId[account];
+    }
+
+
     /**
      * @notice a merchant can call {merchantWithdraw} to withdraw their token balance.
      *

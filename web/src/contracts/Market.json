@@ -192,6 +192,13 @@
   },
   {
     "type": "function",
+    "name": "getMerchantsId",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getUserBalance",
     "inputs": [],
     "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
