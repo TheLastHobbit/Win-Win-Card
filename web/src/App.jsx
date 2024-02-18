@@ -1,13 +1,14 @@
 import { RouterProvider } from "react-router-dom";
-import routes from "./router";
+import RouterApp from "./router";
 import Header from 'components/header';
+import { BrowserRouter } from "react-router-dom";
 
 function App() {
   return (
-    <div>
+    <BrowserRouter>
       <Header></Header>
-      <RouterProvider router={routes} />
-    </div>
+      <RouterApp />
+    </BrowserRouter>
   )
 }
 

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Card, Space } from 'antd';
+import { Card, Space, Button } from 'antd';
 import './home.css';
 import Profile from 'components/profile';
 
@@ -10,17 +10,32 @@ const HomePage = () => {
 
   return(
     <div className='home'>
-      <Profile></Profile>
+      <h1 className='home-title'>WIN-WIN Card System</h1>
       <div className='home-content'>
         <Space align="center" size="large">
-          <Card title="I am a merchant" style={{ width: 300 }} type="inner" >
-            <Link to="/merchant">Release your Card</Link>
-          </Card>
-          <Card title="I am a buyer" style={{ width: 300 }} type="inner" >
-            <Link to="/buyer">Transfer your Card</Link>
-          </Card>
+          <Link to="/merchant">
+            <Button className="entry-button" size="large" ghost type="primary">
+              Merchant
+            </Button>
+          </Link>
+          <Link to="/buyer">
+            <Button className="entry-button" size="large" ghost type="primary">
+              Buyer/Seller
+            </Button>
+          </Link>
         </Space>
-      </div>
+       {
+        //  <Space align="center" size="large">
+        //    <Card title="Merchant" style={{ width: 300 }} type="inner" >
+        //      <Link to="/merchant">Mint Card</Link>
+        //    </Card>
+        //    <Card title="Buyer/Seller" style={{ width: 300 }} type="inner" >
+        //      <Link to="/buyer">Transfer Card</Link>
+        //    </Card>
+        //  </Space>
+       }
+        </div>
+        <h1 className='about-us'>About US</h1>
     </div>
   )
 }
