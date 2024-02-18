@@ -92,7 +92,7 @@ contract CardMarket is EIP712, Nonces,CardsFactory{
     function permitStore(
         address owner,
         address cardAddr,
-        uint256 NFTid,
+        uint256 NFTid,vbn 
         uint256 price,
         bytes memory _signature
     ) public {
@@ -107,7 +107,7 @@ contract CardMarket is EIP712, Nonces,CardsFactory{
             前32 bytes存储签名的长度 (动态数组存储规则)
             add(sig, 32) = sig的指针 + 32
             等效为略过signature的前32 bytes
-            mload(p) 载入从内存地址p起始的接下来32 bytes数据
+            mload(p) 载入从内存地址p起始的接下来32bytes数据
             */
             // 读取长度数据后的32 bytes
             r := mload(add(_signature, 0x20))

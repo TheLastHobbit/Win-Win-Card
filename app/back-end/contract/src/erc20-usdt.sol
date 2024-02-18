@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "app/back-end/contract/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
-import "openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "app/back-end/contract/lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-import {Nonces} from "lib/openzeppelin-contracts/contracts/utils/Nonces.sol";
+
 contract wUSDT is ERC20,ERC20Permit{
     address Market;
     address admin;   
