@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Space, Form, Input } from 'antd';
-import { useAccount, useReadContracts, useSignTypedData } from 'wagmi'
+import { useAccount, useReadContracts } from 'wagmi'
+import { CreateNewCardSeries } from 'utils/Market'
 import MerchantInfo from './MerchantInfo'
 import './index.css';
 import TokenABI from '../../contracts/Token.json'
@@ -36,8 +37,9 @@ const tokenWagmiContract = {
 const Merchant = () => {
   const [form] = Form.useForm();
   const [showEdit, setShowEdit] = useState(false);
-  
   const { address: account  } = useAccount()
+  let balance = 0
+  let token = ''
   console.log('account', account);
   const { data = [] } = useReadContracts({
     contracts: [
@@ -52,21 +54,35 @@ const Merchant = () => {
       }
     ]
   })
-  console.log('data', data);
+
+  if (data && data.length === 2) {
+    if (data[0].status === 'success') {
+      balance = data[0].result
+    }
+    if (data[1].status === 'success') {
+      token = data[1].result
+    }
+  }
+
 
   const onFinish = (values) => {
-    const readConfig = {
-      abi: '',
-      
-    }
   };
   const onFinishFailed = (errorInfo) => {
     console.log('Failed:', errorInfo);
   };
+
   const onReset = () => {
     form.resetFields();
   };
 
+  const onCreateCard = (values) => {
+    console.log('values', values);
+    CreateNewCardSeries(values).then(res => {
+      console.log('CreateNewCardSeries success', res); 
+    }).catch(err => {
+      console.log('CreateNewCardSeries failed', err);
+    })
+  }
 
   return <div className="merchant-box">
     <div className='merchant-left'>
@@ -88,25 +104,25 @@ const Merchant = () => {
           className="deploy-my-card" 
           name="merchantform"
           form={form} 
-          onFinish={onFinish}
+          onFinish={onCreateCard}
           onReset={onReset}
           onFinishFailed={onFinishFailed}>
-            <Form.Item label="Merchant ID" name="merchantId" rules={rules.merchantId}>
+            <Form.Item label="Merchant ID" name="_merchantId" rules={rules.merchantId}>
               <Input />
             </Form.Item>
-            <Form.Item label="Series Name" name="seriesName" rules={rules.seriesName}>
+            <Form.Item label="Series Name" name="_seriesName" rules={rules.seriesName}>
               <Input />
             </Form.Item>
-            <Form.Item label="Series Symbol" name="seriesSymbol" rules={rules.seriesSymbol}>
+            <Form.Item label="Series Symbol" name="_seriesSymbol" rules={rules.seriesSymbol}>
               <Input />
             </Form.Item>
-            <Form.Item label="Series Supply" name="seriesSupply" rules={rules.seriesSymbol}>
+            <Form.Item label="Series Supply" name="_maxSupply" rules={rules.seriesSymbol}>
               <Input />
             </Form.Item>
             <Form.Item {...tailLayout}>
               <Space size="large" align="center">
                 <Button type="primary" htmlType="submit">
-                  Create Card
+                  Create Card Series
                 </Button>
                 <Button htmlType="button" onClick={onReset}>
                   Reset
@@ -121,16 +137,9 @@ const Merchant = () => {
         Earnings
       </div>
       <div className='info-item'>
-        <div className="label">Balance(wUSD): </div>
-        <div className="value">31</div>
+        <div className="label">Balance Of Token {token}: </div>
+        <div className="value" style={{fontWeight: 'bold', color: 'red'}}>{balance.toString()}</div>
       </div>
-      <div className='info-item'>
-        <div className="label">Balance(wUSD): </div>
-        <div className="value">1231</div>
-      </div>
-      {
-        // <MerchantInfo></MerchantInfo>
-      }
     </div>
   </div>
 }

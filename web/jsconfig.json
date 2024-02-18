@@ -8,6 +8,7 @@
       "page/*": ["src/pages/*"],
       "components/*": ["src/components/*"],
       "assets/*": ["src/assets/*"],
+      "utils/*": ["src/utils/*"],
     }
   },
   "exclude": ["node_modules"]
