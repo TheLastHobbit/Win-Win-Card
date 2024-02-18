@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -17,7 +15,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *
  * @dev Implementation of the {ICardsFactory} interface.
  */
-contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
+
+contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard {
     using Clones for address;
     using SafeERC20 for IERC20;
 
@@ -187,22 +186,22 @@ contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
      * @param _MerkleRoot the root of a merkle tree established by a merchant corresponding to the given `_merchantId`
      * @param _tokenURI a custom string which is stored in the card minted
      */
-    function cardClaim(
-        uint256 _merchantId,
-        uint256 _seriesId,
-        bytes32[] calldata _merkleProof,
-        bytes32 _MerkleRoot,
-        string calldata _tokenURI,
-        uint256 _price
-    ) external {
-        _checkCardSeries(_merchantId, _seriesId);
-        address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
-        ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI);
-        uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI);
-        IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
-        merchantBalance[_merchantId] += _price;
-        emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId);   
-    }
+    // function cardClaim(
+    //     uint256 _merchantId,
+    //     uint256 _seriesId,
+    //     bytes32[] calldata _merkleProof,
+    //     bytes32 _MerkleRoot,
+    //     string calldata _tokenURI,
+    //     uint256 _price
+    // ) external {
+    //     _checkCardSeries(_merchantId, _seriesId);
+    //     address contractAddress = getCardSeriesAddress(_merchantId, _seriesId);
+    //     ICardSeries(contractAddress).validateCardClaim(_merkleProof, _MerkleRoot, _tokenURI);
+    //     uint256 tokenId = ICardSeries(contractAddress).mintCard(msg.sender, _tokenURI);
+    //     IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), _price);
+    //     merchantBalance[_merchantId] += _price;
+    //     emit cardMinted(_merchantId, _seriesId, msg.sender, tokenId);   
+    // }
 
     /**
      * @notice a user who has sold its card(s) in the secondary market can call {userWithdraw} to withdraw their token balance.
