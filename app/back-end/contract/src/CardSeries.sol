@@ -29,7 +29,7 @@ contract CardSeries is ICardSeries, ERC721URIStorage, EIP712Upgradeable, Nonces 
     mapping(uint256 tokenId => uint256 tokenValue) internal cardBalance;
     mapping(uint256 tokenId => uint256 numOfTransferred) internal transNum;
 
-    constructor() ERC721("Win-Win Card", "WWC") {}
+    constructor() ERC721("XiJianChui", "XJC") {}
 
     /**
      * @dev Because the constructor does not work when this contract is deployed via minimal proxy, this function will initialize 

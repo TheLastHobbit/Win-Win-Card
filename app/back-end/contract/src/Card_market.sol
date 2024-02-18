@@ -51,7 +51,7 @@ contract CardMarket is EIP712, Nonces,CardsFactory{
     );
     event chargeEvent(address indexed shop, uint256 charge);
 
-    constructor(address _erc20)CardsFactory() EIP712("CardMarket", "1") {
+    constructor(address _erc20)CardsFactory(0x02a00a065d325F9f0eb7AE1D19e40fC129f96CE6,0x17f6eda70e4A7289e9CD57865a0DfC69313EcF58) EIP712("CardMarket", "1") {
         require(
             address(_erc20) != address(0),
             "Market: IERC20 contract address must be non-null"

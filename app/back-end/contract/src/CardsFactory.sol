@@ -18,7 +18,7 @@ import {console} from "forge-std/console.sol";
  *
  * @dev Implementation of the {ICardsFactory} interface.
  */
-contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard, Nonces {
+contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
     using Clones for address;
     using SafeERC20 for IERC20;
 
@@ -133,21 +133,21 @@ contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard, Nonces {
     /**
      * @dev when user deposits AVAX to this contract directly without calling any functions, {receive} will be called.
      *
-     * Emit a {AVAXDeposited} event.
+     * Emit a {depositedAVAX} event.
      */
     receive() external payable {
         AVAXDeposited[msg.sender] += msg.value;
-        emit AVAXDeposited(msg.sender, msg.value);
+        emit depositedAVAX(msg.sender, msg.value);
     }
 
     /**
-     * @dev User deposits AVAX to this contract.
+     * @notice User deposits AVAX to this contract.
      *
-     * Emit a {AVAXDeposited} event.
+     * Emit a {depositedAVAX} event.
      */
-    function depositAVAX()public payable {
+    function depositAVAX() public payable {
         AVAXDeposited[msg.sender] += msg.value;
-        emit AVAXDeposited(msg.sender, msg.value);
+        emit depositedAVAX(msg.sender, msg.value);
     }
 
     /**
