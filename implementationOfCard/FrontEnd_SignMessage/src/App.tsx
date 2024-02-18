@@ -91,6 +91,15 @@ const App = () => {
   // Claim Card:
   const ContractAddr_CardClaim = useRef<HTMLInputElement>(null);
 
+  // Sign for {mintCard}
+  const name_mintCard = useRef<HTMLInputElement>(null);
+  const chainId_mintCard = useRef<HTMLInputElement>(null);
+  const verifyingContract_mintCard = useRef<HTMLInputElement>(null);
+  const merchantId_mintCard = useRef<HTMLInputElement>(null);
+  const seriesId_mintCard = useRef<HTMLInputElement>(null);
+  const price_mintCard = useRef<HTMLInputElement>(null);
+  const deadline_mintCard = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     let provider: ethers.BrowserProvider;
     const refreshAccounts = async () => {
@@ -809,6 +818,75 @@ const App = () => {
     }
   };
 
+   // Sign typed data for mintCard@CardFactory
+   const sign_mintCard = async () => {
+    const name = name_mintCard.current?.value;
+    const version = "1";
+    const chainId = chainId_mintCard.current?.value;
+    const verifyingContract = verifyingContract_mintCard.current?.value;
+    const merchantId = merchantId_mintCard.current?.value;
+    const seriesId = seriesId_mintCard.current?.value;
+    const price = price_mintCard.current?.value;
+    const deadline = deadline_mintCard.current?.value;
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const accountAddr = await signer.getAddress();
+    const tokenAddress = verifyingContract;
+    const tokenAbi = ["function nonces(address owner) view returns (uint256)"];
+    let tokenContract;
+    let nonce;
+    if (tokenAddress) {
+      tokenContract = new ethers.Contract(tokenAddress, tokenAbi, provider);
+      nonce = await tokenContract.nonces(accountAddr);
+    } else {
+      console.log("Invalid token address");
+    }
+
+    const domain = {
+      name: name,
+      version: version,
+      chainId: chainId,
+      verifyingContract: verifyingContract,
+    };
+
+    const types = {
+      PermitForMintCard: [
+        { name: "merchantId", type: "uint256" },
+        { name: "seriesId", type: "uint256" },
+        { name: "price", type: "uint256" },
+        { name: "signerNonce", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    };
+
+    const message = {
+      merchantId: merchantId,
+      seriesId: seriesId,
+      price: price,
+      signerNonce: nonce,
+      deadline: deadline,
+    };
+
+    try {
+      console.log(
+        `Domin || name: ${domain.name}, version: ${domain.version}, chainId: ${domain.chainId}, verifyingContract: ${domain.verifyingContract}`
+      );
+      console.log("Types || Permit: ", JSON.stringify(types.PermitForMintCard, null, 2));
+      console.log(
+        `message || merchantId: ${message.merchantId}, seriesId: ${message.seriesId}, price: ${message.price}, deadline: ${message.deadline}, nonce: ${message.signerNonce}`
+      );
+      console.log(`message: ${message}`);
+      const signedMessage = await signer.signTypedData(domain, types, message);
+      console.log("Signature:", signedMessage);
+      const signatureResult = ethers.Signature.from(signedMessage);
+      console.log("v: ", signatureResult.v);
+      console.log("r: ", signatureResult.r);
+      console.log("s: ", signatureResult.s);
+    } catch (error) {
+      console.error("Error signing permit:", error);
+    }
+  };
+
   const cardClaim = async () => {
     const contractAddr = ContractAddr_CardClaim.current?.value;
     const whitelistData = getWhitelistData();
@@ -1272,6 +1350,59 @@ const App = () => {
                   type="text"
                 />
                 <button onClick={cardClaim}>Claim NFT!</button>
+              </>
+            )}
+            <br />
+            <h3 style={{ fontSize: "20px" }}>
+              Sign for mintCard:{" "}
+            </h3>
+            {window.ethereum?.isMetaMask && wallet.accounts.length > 0 && (
+              <>
+                <label>Token Name:</label>
+                <input
+                  ref={name_mintCard}
+                  placeholder="Series Name"
+                  type="text"
+                />
+                <label>ChainId:</label>
+                <input
+                  ref={chainId_mintCard}
+                  placeholder="ChainId"
+                  type="text"
+                />
+                <label>Verifying Contract Address:</label>
+                <input
+                  ref={verifyingContract_mintCard}
+                  placeholder="Verifying Contract Address"
+                  type="text"
+                />
+                <label>merchantId:</label>
+                <input
+                  ref={merchantId_mintCard}
+                  placeholder="merchantId"
+                  type="text"
+                />
+                <label>seriesId:</label>
+                <input
+                  ref={seriesId_mintCard}
+                  placeholder="seriesId"
+                  type="text"
+                />
+                <label>price:</label>
+                <input
+                  ref={price_mintCard}
+                  placeholder="price"
+                  type="text"
+                />
+                <label>Deadline:</label>
+                <input
+                  ref={deadline_mintCard}
+                  placeholder="Deadline"
+                  type="text"
+                />
+                <button onClick={sign_mintCard}>
+                  Sign For Mint Card
+                </button>
               </>
             )}
           </div>

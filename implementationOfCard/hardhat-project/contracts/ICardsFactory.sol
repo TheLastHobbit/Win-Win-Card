@@ -30,11 +30,10 @@ interface ICardsFactory {
      * @dev Emitted when a card of a specific `seriesId` of a merchant is minted.
      */
     event cardMinted(
-        uint256 merchantId,
+        uint256 indexed merchantId,
         uint256 seriesId,
         address indexed recipient,
-        uint256 indexed tokenId,
-        uint256 indexed storedValue
+        uint256 indexed tokenId
     );
 
     /**
@@ -60,6 +59,11 @@ interface ICardsFactory {
      * @dev Emitted when a member of a specific merchant withdraw the balance of the merchant by calling {merchantWithdraw}.
      */
     event merchantWithdrawal(uint256 merchantId, address withdrawer, uint256 withdrawnValue);
+
+    /**
+     * @dev Emited when a user deposits AVAX.
+     */
+    event AVAXDeposited(address user, uint256 value);
 
     /**
      * @dev Indicates a failure with `merchantId` and the function `caller`. Used to check if `caller` is the member of the merchant of `merchantId`.
@@ -131,14 +135,13 @@ interface ICardsFactory {
      *
      * Emits a {cardMinted} event.
      *
-     * Interface Deprecated: The visibility of this function is modified to `internal`.
-     *
-     * @param _to the address of the recipient.
+     * @param _to the address of the recipient which should pay AVAX for the minted card
      * @param _tokenURI a custom string which is stored in the card
-     * @param _cardData a custom byte32 variable which indicate the properties of the card series
-     * @param _storedValue the amount of the ERC20 token stored in the minted card.
+     * @param _price the value of AVAX in exchange for the minted card
+     * @param _deadline the timestamp of the expiration of the off-chain signed message
+     * @param _signature the signed message containing merchantId, seriesId and price
      */
-    // function _mintCard(uint256 _merchantId, uint256 _seriesId, address _to, string calldata _tokenURI, bytes32 _cardData, uint256 _storedValue) internal;
+    function mintCard(uint256 _merchantId, uint256 _seriesId, address payable _to, string calldata _tokenURI, uint256 _price, uint256 _deadline, bytes memory _signature) external payable;
 
     /**
      * @notice Whitelist members claim their cards.
@@ -238,6 +241,16 @@ interface ICardsFactory {
      * @notice Get the contract address of the card series based on the given `_merchantId` and `_seriesId`.
      */
     function getCardSeriesAddress(uint256 _merchantId, uint256 _seriesId) external view returns (address);
+
+    /**
+     * @notice Get the deposited amount of AVAX in this contract.
+     */
+    function getAVAXDeposited(address _user) external view returns (uint256);
+
+    /**
+     * @notice Check if `_account` is a member of a merchant.
+     */
+    function checkIfRegisteredMerchant(address _account) external view returns (bool);
 
     /**
      * @dev Function Deprecated: This function is currently banned because listing and delisting will be realized off-chain.
