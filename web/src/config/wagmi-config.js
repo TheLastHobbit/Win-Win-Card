@@ -8,3 +8,8 @@ export const config = createConfig({
     [sepolia.id]: http(),
   },
 });
+
+export const ContractConfig = {
+  abi: "NFTAbi",
+  address: "nftAddr",
+};

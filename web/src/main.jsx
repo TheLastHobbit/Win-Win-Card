@@ -16,6 +16,7 @@ const queryClient = new QueryClient()
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <React.StrictMode>
+
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}> 
           <ModalProvider
@@ -53,7 +54,7 @@ root.render(
               language="en"
               theme={'light'}
           >
-              <App />
+            <App />
           </ModalProvider>
         </QueryClientProvider> 
       </WagmiProvider>

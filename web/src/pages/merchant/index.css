@@ -1,9 +1,50 @@
+
+
 .merchant-box {
-  display: flex;
-  justify-content: center;
   padding: 32px;
-  padding-top: 120px;
+  display: flex;
+}
+
+.merchant-left {
+  padding-left: 120px;
+}
+
+
+.merchant-title {
+  font-size: 60px;
+  color: #fff;
+  width: 600px;
+  background: linear-gradient(-25deg,hsla(0,0%,100%,0) 56%,#fff 98%),linear-gradient(177deg,#c6d1ff 40%,#fff 60%);
+  -webkit-background-clip: text;
+  font-weight: bold;
+  -webkit-text-fill-color: transparent;
+}
+
+.create-btn {
+  width: 140px;
+  height: 50px;
+  font-weight: bold;
+  font-size: 16px;
+  color: #fff;
+  margin: 0 auto;
+  margin-top: 120px;
+  margin-left: 100px;
 }
 .deploy-my-card {
   width: 360px;
+  margin-top: 32px;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n).ant-form-item .ant-form-item-label >label {
+  color: #fff;
+  font-weight: bold;
+}
+.merchant-right {
+  padding-left: 120px;
+  color: #fff;
+}
+.earning-title {
+  font-size: 24px;
+  color: #fff;
+  margin-top: 32px;
+  font-weight: bold;
 }
