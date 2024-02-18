@@ -63,7 +63,7 @@ interface ICardsFactory {
     /**
      * @dev Emited when a user deposits AVAX.
      */
-    event AVAXDeposited(address user, uint256 value);
+    event depositedAVAX(address user, uint256 value);
 
     /**
      * @dev Indicates a failure with `merchantId` and the function `caller`. Used to check if `caller` is the member of the merchant of `merchantId`.
@@ -129,6 +129,13 @@ interface ICardsFactory {
      * @dev Function Deprecated: The function for delisting cards is realized off-chain instead.
      */
     // function delist(uint256 _merchantId, uint256 _seriesId, uint256 _tokenId) external;
+
+    /**
+     * @notice User deposits AVAX to this contract.
+     *
+     * Emit a {depositedAVAX} event.
+     */
+    function depositAVAX() external payable;
 
     /**
      * @notice Mint a new card by the corresponding merchant.

@@ -82,7 +82,7 @@ interface ICardsFactory {
     /**
      * @dev Emited when a user deposits AVAX.
      */
-    event AVAXDeposited(address user, uint256 value);
+    event depositedAVAX(address user, uint256 value);
 
     /**
      * @dev Indicates a failure with `merchantId` and the function `caller`. Used to check if `caller` is the member of the merchant of `merchantId`.
@@ -152,7 +152,7 @@ interface ICardsFactory {
     /**
      * @notice User deposits AVAX to this contract.
      *
-     * Emit a {AVAXDeposited} event.
+     * Emit a {depositedAVAX} event.
      */
     function depositAVAX() external payable;
 
