@@ -3,11 +3,13 @@ import { Button, Space, Form, Input } from 'antd';
 import { useAccount, useReadContracts, useSignTypedData } from 'wagmi'
 import MerchantInfo from './MerchantInfo'
 import './index.css';
+import TokenABI from '../../contracts/Token.json'
 
 const rules = {
   merchantId: [{ required: true, message: 'Please input Merchant-ID!', },],
   seriesName: [{ required: true, message: 'Please input Series-Name!', },],
-  seriesSymbol: [{ required: true, message: 'Please input Series-Symbol!', },]
+  seriesSymbol: [{ required: true, message: 'Please input Series-Symbol!', },],
+  seriesSupply: [{ required: true, message: 'Please input Series-Supply!', },]
 }
 
 const layout = {
@@ -25,10 +27,10 @@ const tailLayout = {
     span: 16,
   },
 };
-
+console.log('TokenABI', TokenABI);
 const tokenWagmiContract = {
-  abi: '',
-  address: ''
+  abi: TokenABI,
+  address: '0x17f6eda70e4A7289e9CD57865a0DfC69313EcF58'
 }
 
 const Merchant = () => {
@@ -36,7 +38,8 @@ const Merchant = () => {
   const [showEdit, setShowEdit] = useState(false);
   
   const { address: account  } = useAccount()
-    const { data = [] } = useReadContracts({
+  console.log('account', account);
+  const { data = [] } = useReadContracts({
     contracts: [
       {
         ...tokenWagmiContract,
@@ -49,6 +52,7 @@ const Merchant = () => {
       }
     ]
   })
+  console.log('data', data);
 
   const onFinish = (values) => {
     const readConfig = {
@@ -94,6 +98,9 @@ const Merchant = () => {
               <Input />
             </Form.Item>
             <Form.Item label="Series Symbol" name="seriesSymbol" rules={rules.seriesSymbol}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Series Supply" name="seriesSupply" rules={rules.seriesSymbol}>
               <Input />
             </Form.Item>
             <Form.Item {...tailLayout}>
