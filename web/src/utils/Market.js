@@ -75,3 +75,8 @@ export async function checkRegisteredMerchant(_account) {
 export async function MerchantRegistration() {
   contract.merchantRegistration();
 }
+
+export async function getAddrMerchantId() {
+  const merchantid = contract.getMerchantsId();
+  return merchantid;
+}
