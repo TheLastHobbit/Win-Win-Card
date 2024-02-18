@@ -51,7 +51,7 @@ contract CardMarket is EIP712, Nonces,CardsFactory{
     );
     event chargeEvent(address indexed shop, uint256 charge);
 
-    constructor(address _erc20) EIP712("CardMarket", "1") {
+    constructor(address _erc20)CardsFactory() EIP712("CardMarket", "1") {
         require(
             address(_erc20) != address(0),
             "Market: IERC20 contract address must be non-null"
@@ -92,7 +92,7 @@ contract CardMarket is EIP712, Nonces,CardsFactory{
     function permitStore(
         address owner,
         address cardAddr,
-        uint256 NFTid,vbn 
+        uint256 NFTid,
         uint256 price,
         bytes memory _signature
     ) public {

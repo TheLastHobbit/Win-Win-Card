@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *
  * @dev Implementation of the {ICardsFactory} interface.
  */
-contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard, Nonces {
+contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard,Nonces{
     using Clones for address;
     using SafeERC20 for IERC20;
 
@@ -144,7 +144,7 @@ contract CardsFactory is ICardsFactory, Ownable, ReentrancyGuard, Nonces {
      *
      * Emit a {AVAXDeposited} event.
      */
-    function depositAVAX() payable {
+    function depositAVAX() public payable {
         AVAXDeposited[msg.sender] += msg.value;
         emit AVAXDeposited(msg.sender, msg.value);
     }
