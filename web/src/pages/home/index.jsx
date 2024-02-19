@@ -16,11 +16,13 @@ const HomePage = () => {
 
   useEffect(() => {
     checkRegisteredMerchant(account).then((res) => {
-      setIsRegister(true)
+      console.log('checkRegisteredMerchant', checkRegisteredMerchant);
+      setIsRegister(res)
     })
   }, [account])
 
   const onRegister = () => {
+    console.log('isRegister', isRegister);
     if (!isRegister) {
       MerchantRegistration().then(() => {
        console.log("merchantRegistration success!")

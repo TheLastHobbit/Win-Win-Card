@@ -1,6 +1,6 @@
 
 
-.merchant-box {
+.merchant-box .ant-spin-container{
   padding: 32px;
   display: flex;
 }
@@ -62,7 +62,7 @@
 }
 .card-info-item .label {
   font-weight: bold;
-  width: 120px;
+  width: 140px;
   margin-right: 12px;
   color: brown;
 }
@@ -80,4 +80,8 @@
   right: 30px;
   bottom: 100px;
   width: 200px;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n).ant-spin-nested-loading >div>.ant-spin .ant-spin-text {
+  text-shadow: none;
 }

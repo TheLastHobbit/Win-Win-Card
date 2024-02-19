@@ -27,6 +27,17 @@ export const writeMarket = async (
   return walletClient.writeContract(request);
 };
 
+export const mintCardByWagmi = async (account, mintAddress, args) => {
+  const { request } = await publicClient.simulateContract({
+    account,
+    address: mintAddress,
+    abi: ABI,
+    args: args,
+    functionName: "mintCard",
+  });
+  return walletClient.writeContract(request);
+};
+
 // payable方法
 export async function buy(
   seller,
@@ -59,7 +70,6 @@ export async function MintCard(
     _deadline,
     _signature
   );
-  console.log(_merchantId, "mint", _id, "to", _to, "custom successful!");
 }
 
 export async function CreateNewCardSeries(

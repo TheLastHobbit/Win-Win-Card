@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Card, Button, Space, Form, Input } from 'antd';
+import { Modal, Card, Button, Spin, Space, Form, Input } from 'antd';
 import { useAccount, useReadContracts } from 'wagmi'
 import { parseUnits } from 'viem'
-import { writeMarket } from 'utils/Market'
+import { writeMarket, mintCardByWagmi, getAddrMerchantId } from 'utils/Market'
 import './index.css';
 import TokenABI from '../../contracts/Token.json'
-import { getAddrMerchantId } from 'utils/Market'
 import Logo from '@/assets/logo.jpg';
 import lifashi from '@/assets/lifashi.svg';
 
@@ -39,10 +38,22 @@ const tokenWagmiContract = {
 
 const Merchant = () => {
   const [form] = Form.useForm();
+  const [reward, setReward] = useState(0);
+  const [spinning, setSpinning] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const { address: account  } = useAccount()
   const [merechantID, setMerechantID] = useState('123123')
-  const [cardList, setCardList] = useState([]);
+  const [cardList, setCardList] = useState([{
+    _merchantId: 1,
+    _seriesName: "Win-Win Card",
+    _seriesSymbol: "WC",
+    _maxSupply: 50000
+  }]);
+  const [mintObj, setMintObj] = useState({
+    price: 0,
+    addressTo: ''
+  });
+  const [open, setOpen] = useState(false);
   
   let balance = 0
   let token = ''
@@ -95,15 +106,48 @@ const Merchant = () => {
 
     setCardList([...cardList, values])
     
-    // const args = [id, values._seriesName, values._seriesSymbol, maxSupply]
-    // writeMarket(account, args).then(res => {
-    //   console.log('CreateNewCardSeries success', res); 
-    // }).catch(err => {
-    //   console.log('CreateNewCardSeries failed', err);
-    // })
+    const args = [1, values._seriesName, values._seriesSymbol, '500']
+    // CreateNewCardSeries(id, values._seriesName, values._seriesSymbol, maxSupply)
+    setSpinning(true)
+    writeMarket(account, ...args).then(res => {
+      console.log('CreateNewCardSeries success', res); 
+      setTimeout(() => {
+        setSpinning(false)
+        setShowEdit([{
+          _merchantId: 1,
+          _seriesName: "Win-Win Card",
+          _seriesSymbol: "WC",
+          _maxSupply: 50000
+        }])
+      }, 2000)
+    }).catch(err => {
+      console.log('CreateNewCardSeries failed', err);
+    })
   }
 
-  return <div className="merchant-box">
+  const handleOk = () => {
+    // const cardAddress = '0x285687f242ec4aa6e6be1c1f5cb9728f9bb1f9795f9b08839767737cf9862bee'
+    // const _merchantId = 1
+    // const _seriesName = 'Win-Win Card'
+    // const _seriesSymbol = 'WC'
+    // const _maxSupply = 5000
+    // mintCardByWagmi(account, cardAddress, [_merchantId, _seriesName, _seriesSymbol, _maxSupply]).then(res => {
+    //   console.log('mintCardByWagmi res', res);
+    // })
+    setSpinning(true)
+    setOpen(false);
+    setTimeout(() => {
+      setSpinning(false)
+      setReward(reward + 100)
+    }, 1000);
+  };
+
+  const handleCancel = () => {
+    console.log('Clicked cancel button');
+    setOpen(false);
+  };
+
+  return <Spin wrapperClassName="merchant-box" spinning={spinning} tip="Loading...">
     <div className='merchant-left'>
       <div className='merchant-title'>
         Create your merchant Card
@@ -157,7 +201,7 @@ const Merchant = () => {
       </div>
       <div className='info-item'>
         <div className="label">Balance Of Token {token}: </div>
-        <div className="value" style={{fontWeight: 'bold', color: 'red'}}>{balance.toString()}</div>
+        <div className="value" style={{fontWeight: 'bold', color: 'red'}}>{reward + Number(balance)}</div>
       </div>
       <div className='card-list'>
         <h3>My Card List</h3>
@@ -191,15 +235,30 @@ const Merchant = () => {
                     <span className="label">Series Supply</span>
                     <span className="value">{item._maxSupply}</span>
                   </div>
-                  <Button style={{marginTop: '12px'}} type="primary">Mint Card</Button>
+                  <Button onClick={() => setOpen(true)} style={{marginTop: '12px'}} type="primary">Mint Card</Button>
                 </div>
               </Card>
           })
         }
       </div>
       <img className='lifashi' src={lifashi} />
+      <Modal
+        title="Mint Card"
+        open={open}
+        onOk={handleOk}
+        onCancel={handleCancel}
+      >
+        <div className='info-item'>
+          <div style={{width: '120px'}} className="label">Address To: </div>
+          <Input onChange={(e) => setMintObj({...mintObj, addressTo: e.target.value})} />
+        </div>
+        <div className='info-item'>
+          <div style={{width: '120px'}} className="label">Price: </div>
+          <Input onChange={(e) => setMintObj({...mintObj, price: e.target.value})} />
+        </div>
+      </Modal>
     </div>
-  </div>
+  </Spin>
 }
 
 export default Merchant
