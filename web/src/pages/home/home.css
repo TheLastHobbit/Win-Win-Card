@@ -12,7 +12,7 @@
   font-weight: bold;
   text-align: center;
   margin-top: 60px;
-  margin-bottom: 120px;
+  margin-bottom: 20px;
   color: #fff;
 }
 .about-us {
@@ -20,7 +20,7 @@
   color: #999;
   text-decoration: underline;
   cursor: pointer;
-  margin-top: 180px;
+  margin-top: 20px;
 }
 .about-us:hover {
   color: #fff;
@@ -29,4 +29,11 @@
   width: 160px;
   height: 60px;
   font-size: 22px;
+}
+.custom , .lifashi {
+  width: 320px;
+}
+.custom {
+  width: 280px;
+  margin-left: 32px;
 }

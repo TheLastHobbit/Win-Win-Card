@@ -1,10 +1,13 @@
-import { useState } from 'react'
-import { Button, Space, Form, Input } from 'antd';
+import { useState, useEffect } from 'react'
+import { Card, Button, Space, Form, Input } from 'antd';
 import { useAccount, useReadContracts } from 'wagmi'
-import { CreateNewCardSeries } from 'utils/Market'
-import MerchantInfo from './MerchantInfo'
+import { parseUnits } from 'viem'
+import { writeMarket } from 'utils/Market'
 import './index.css';
 import TokenABI from '../../contracts/Token.json'
+import { getAddrMerchantId } from 'utils/Market'
+import Logo from '@/assets/logo.jpg';
+import lifashi from '@/assets/lifashi.svg';
 
 const rules = {
   merchantId: [{ required: true, message: 'Please input Merchant-ID!', },],
@@ -28,7 +31,7 @@ const tailLayout = {
     span: 16,
   },
 };
-console.log('TokenABI', TokenABI);
+
 const tokenWagmiContract = {
   abi: TokenABI,
   address: '0x17f6eda70e4A7289e9CD57865a0DfC69313EcF58'
@@ -38,9 +41,12 @@ const Merchant = () => {
   const [form] = Form.useForm();
   const [showEdit, setShowEdit] = useState(false);
   const { address: account  } = useAccount()
+  const [merechantID, setMerechantID] = useState('123123')
+  const [cardList, setCardList] = useState([]);
+  
   let balance = 0
   let token = ''
-  console.log('account', account);
+
   const { data = [] } = useReadContracts({
     contracts: [
       {
@@ -54,6 +60,14 @@ const Merchant = () => {
       }
     ]
   })
+
+  useEffect(() => {
+    getAddrMerchantId().then(res => {
+      setMerechantID(res.toString())
+    }).catch(err => {
+      console.log('getAddrMerchantId err', err);
+    })
+  }, [account])
 
   if (data && data.length === 2) {
     if (data[0].status === 'success') {
@@ -76,12 +90,17 @@ const Merchant = () => {
   };
 
   const onCreateCard = (values) => {
-    console.log('values', values);
-    CreateNewCardSeries(values).then(res => {
-      console.log('CreateNewCardSeries success', res); 
-    }).catch(err => {
-      console.log('CreateNewCardSeries failed', err);
-    })
+    const id = parseUnits(values._merchantId)
+    const maxSupply = parseUnits(values._maxSupply)
+
+    setCardList([...cardList, values])
+    
+    // const args = [id, values._seriesName, values._seriesSymbol, maxSupply]
+    // writeMarket(account, args).then(res => {
+    //   console.log('CreateNewCardSeries success', res); 
+    // }).catch(err => {
+    //   console.log('CreateNewCardSeries failed', err);
+    // })
   }
 
   return <div className="merchant-box">
@@ -107,8 +126,8 @@ const Merchant = () => {
           onFinish={onCreateCard}
           onReset={onReset}
           onFinishFailed={onFinishFailed}>
-            <Form.Item label="Merchant ID" name="_merchantId" rules={rules.merchantId}>
-              <Input />
+            <Form.Item label="Merchant ID" name="_merchantId" rules={rules.merchantId} initialValue={merechantID}>
+              <Input disabled />
             </Form.Item>
             <Form.Item label="Series Name" name="_seriesName" rules={rules.seriesName}>
               <Input />
@@ -117,7 +136,7 @@ const Merchant = () => {
               <Input />
             </Form.Item>
             <Form.Item label="Series Supply" name="_maxSupply" rules={rules.seriesSymbol}>
-              <Input />
+              <Input type="number" />
             </Form.Item>
             <Form.Item {...tailLayout}>
               <Space size="large" align="center">
@@ -140,6 +159,45 @@ const Merchant = () => {
         <div className="label">Balance Of Token {token}: </div>
         <div className="value" style={{fontWeight: 'bold', color: 'red'}}>{balance.toString()}</div>
       </div>
+      <div className='card-list'>
+        <h3>My Card List</h3>
+        {
+          cardList.map((item, index) => {
+            return <Card 
+              className="card-item"
+              key={item.merchantId} 
+              title={`My Card ${index + 1}`}
+              style={{ width: 400 }}
+              cover={
+                <img
+                  alt="example"
+                  src={Logo}
+                />}
+              type="inner" >
+                <div className='inner'>
+                  <div className="card-info-item">
+                    <span className="label">Merchant ID</span>
+                    <span className="value">{item. _merchantId}</span>
+                  </div>
+                  <div className="card-info-item">
+                    <span className="label">Series Name</span>
+                    <span className="value">{item._seriesName}</span>
+                  </div>
+                  <div className="card-info-item">
+                    <span className="label">Series Symbol</span>
+                    <span className="value">{item._seriesSymbol}</span>
+                  </div>
+                  <div className="card-info-item">
+                    <span className="label">Series Supply</span>
+                    <span className="value">{item._maxSupply}</span>
+                  </div>
+                  <Button style={{marginTop: '12px'}} type="primary">Mint Card</Button>
+                </div>
+              </Card>
+          })
+        }
+      </div>
+      <img className='lifashi' src={lifashi} />
     </div>
   </div>
 }

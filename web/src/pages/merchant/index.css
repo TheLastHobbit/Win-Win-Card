@@ -41,10 +41,43 @@
 .merchant-right {
   padding-left: 120px;
   color: #fff;
+  position: relative;
 }
 .earning-title {
   font-size: 24px;
   color: #fff;
   margin-top: 32px;
   font-weight: bold;
+}
+.ant-input {
+  color: red !important;
+}
+
+.card-info-item {
+  display: inline-block;
+  width: 160px;
+}
+.card-item {
+  margin-bottom: 32px;
+}
+.card-info-item .label {
+  font-weight: bold;
+  width: 120px;
+  margin-right: 12px;
+  color: brown;
+}
+.card-info-item .value {
+  margin-right: 22px;
+  font-weight: bold;
+}
+
+.merchant-right .ant-card-body {
+  display: inline-block;
+  margin-top: -40px;
+}
+.merchant-right .lifashi {
+  position: fixed;
+  right: 30px;
+  bottom: 100px;
+  width: 200px;
 }

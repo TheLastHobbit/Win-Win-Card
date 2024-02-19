@@ -7,6 +7,8 @@ import { useEffect } from 'react';
 import { useAccount, useReadContracts, useSignTypedData } from 'wagmi'
 import { MerchantRegistration } from 'utils/Market'
 import { useState } from 'react';
+import lifashi from '@/assets/lifashi.svg';
+import custom from '@/assets/custom.svg';
 
 const HomePage = () => {
   const [isRegister, setIsRegister] = useState(false)
@@ -33,6 +35,7 @@ const HomePage = () => {
     <div className='home'>
       <h1 className='home-title'>WIN-WIN Card System</h1>
       <div className='home-content'>
+        <img className='lifashi' src={lifashi}  />
         <Space align="center" size="large">
           <Link to="/merchant">
             <Button onClick={onRegister} className="entry-button" size="large" ghost type="primary">
@@ -45,6 +48,7 @@ const HomePage = () => {
             </Button>
           </Link>
         </Space>
+        <img className='custom' src={custom}  />
        {
         //  <Space align="center" size="large">
         //    <Card title="Merchant" style={{ width: 300 }} type="inner" >

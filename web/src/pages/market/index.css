@@ -1,0 +1,23 @@
+.market-box {
+  /* display: flex; */
+  padding-top: 30px;
+}
+
+.market-title {
+  color: #fff;
+  text-align: center;
+}
+
+.market-title {
+  color: #fff;
+}
+
+.market-box .logo-img {
+  top: 80px;
+}
+
+.card-box {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}

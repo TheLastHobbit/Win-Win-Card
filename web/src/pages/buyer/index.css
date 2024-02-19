@@ -1,7 +1,7 @@
 .card-box {
-  display: flex;
   align-items: center;
   padding: 32px;
+  padding-left: 120px;
 }
 .info-item {
   display: flex;
@@ -10,4 +10,38 @@
 .info-item .label {
   font-weight: bold;
   margin-right: 12px;
+}
+
+.card-box .ant-card-body {
+  position: relative;
+}
+
+.logo-img {
+  position: absolute;
+  top: 40px;
+  right: 20px;
+  width: 160px;
+}
+.card-left {
+  flex: 1;
+  display: flex;
+}
+
+.card-right {
+  width: 320px;
+  font-weight: bold;
+  font-size: 20px;
+  margin-bottom: 32px;
+  color: dodgerblue;
+}
+
+.card-right .label {
+  color: #fff;
+}
+
+.card-box .custom {
+  position: fixed;
+  bottom: 60px;
+  left: 64px;
+  width: 160px;
 }

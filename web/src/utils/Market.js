@@ -1,9 +1,31 @@
 import { ethers } from "ethers";
 import ABI from "../contracts/Market.json";
+import { publicClient, walletClient } from "./client";
 
-let provider = new ethers.BrowserProvider(window.ethereum)
+let provider = new ethers.BrowserProvider(window.ethereum);
 const contractAddress = "0x03fEB8189b683cdD8eF291eD65e4a7E61182463d";
-const contract = new ethers.Contract(contractAddress, ABI, await provider.getSigner());
+const contract = new ethers.Contract(
+  contractAddress,
+  ABI,
+  await provider.getSigner()
+);
+
+export const writeMarket = async (
+  account,
+  _merchantId,
+  _seriesName,
+  _seriesSymbol,
+  _maxSupply
+) => {
+  const { request } = await publicClient.simulateContract({
+    account,
+    address: contractAddress,
+    abi: ABI,
+    args: [_merchantId, _seriesName, _seriesSymbol, _maxSupply],
+    functionName: "deployNewCardSeries",
+  });
+  return walletClient.writeContract(request);
+};
 
 // payable方法
 export async function buy(
@@ -52,7 +74,6 @@ export async function CreateNewCardSeries(
     _seriesSymbol,
     _maxSupply
   );
-  console.log(_merchantId, "create", _seriesName, "success!");
 }
 
 export async function getCharge(amount) {
@@ -69,9 +90,9 @@ export async function checkRegisteredMerchant(_account) {
 
 //商家注册函数
 export async function MerchantRegistration() {
-   const merchantId = contract.merchantRegistration();
-   console.log("merchantRegistration success!")
-   return merchantId;
+  const merchantId = contract.merchantRegistration();
+  console.log("merchantRegistration success!");
+  return merchantId;
 }
 
 export async function getAddrMerchantId() {

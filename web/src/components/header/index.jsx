@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { Button } from 'antd';
+import { useNavigate, Link } from 'react-router-dom'
 import ConnectButton from 'components/connect-button'
 import './index.css'
 import Logo from 'assets/logo.svg';
@@ -13,6 +14,7 @@ const Header = () => {
     <div className="header">
       <div className="left">
         <img src={Logo} className='logo' alt="logo" onClick={toHome} />
+        <Link to="/market" className="market-link">Market</Link>
         {
           // <h3 className='title'>Win-Win Card</h3>
         }
