@@ -112,13 +112,13 @@ In recent years, various conflicts between merchants and users due to prepaid st
 
 #### CardMarket
 
-![CardMarket](C:\Users\Administrator\Desktop\openSpace\XJC\v1.0\Win-Win-Card\CardMarket.png)
+![CardMarket](./mindmap/CardMarket.png)
 
 
 
 #### Card
 
-![思维导图Card](C:\Users\Administrator\Desktop\openSpace\XJC\思维导图Card.png)
+![思维导图Card](./mindmap/思维导图Card.png)
 
 ### 6. Functions Realized
 
