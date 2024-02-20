@@ -60,5 +60,17 @@ contract CardMarketTest is Test {
         assertEq(token.balanceOf(address(bob)),50 ether);
         assertEq(token.balanceOf(address(alice)),50 ether);
     }
+
+    function test_deploySeriseCard()public{
+        address newCard;
+        vm.startPrank(shoper);
+        {
+            cardMarket.merchantRegistration();
+            cardMarket.deployNewCardSeries(1,"ss","s",100);
+           newCard = cardMarket.getCardSeriesAddress(1,0);
+        }
+        vm.stopPrank();
+        console.log("newCardSerise Address:",newCard);
+    }
 }
 
