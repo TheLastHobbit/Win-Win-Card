@@ -1,7 +1,5 @@
-# English
-
-# Win-Win Card WhitePaper
-
+# Win-Win Card WhitePaper(English Version)
+[Project Files Path](./app/back-end/contract)
 ### 1. Brief Description
 
 In recent years, various conflicts between merchants and users due to prepaid stored-value cards have occurred frequently. More and more people of all ages have been deceived, causing the trust between merchants and consumers to basically disappear, and Rights protection requires additional financial resources, manpower, and energy that are far greater than the value of the recharge card itself. Once consumers pay, they fall into a situation where the control is completely in the hands of the merchants, and some even do things like tricking consumers (usually young college students) into taking loans and charging cards. So how can we break this situation? How can we give consumers the power they deserve so that merchants can be willing to participate, and at the same time, they can transfer the cards under the witness of both parties? Blockchain provides a solution that is close to The perfect solution.
@@ -72,7 +70,9 @@ To help understand the implementation of cards, the relevant concepts and implem
 
   The "project party" that issues cards need to *register* its own `merchantId` to enter the platform. <u>Each merchant corresponds to an unique `merchantId`</u>. The same `merchantId` can have multiple members (i.e. addresses) to invoke the functions related to the merchant, with `merchantId` as the **unique identifier** of the **merchant**.
 
-# Win-Win Card WhitePaper
+# Win-Win Card WhitePaper(Chinese Version)
+
+[工程路径](./app/back-end/contract)
 
 #### 问题分析
 
