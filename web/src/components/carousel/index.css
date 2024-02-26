@@ -1,0 +1,21 @@
+.carousel-wrapper {
+  height: 300px;
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  margin-bottom: 200px;
+}
+
+.card-img {
+  height: 300px;
+  width: 600px;
+  text-align: center;
+  background: #52C0F5;
+  color: #FFF;
+  font-size: 14px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}

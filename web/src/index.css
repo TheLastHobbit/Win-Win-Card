@@ -2,7 +2,7 @@
   box-sizing: border-box;
 }
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Gelion, Helvetica, "Helvetica Neue", Arial;
   line-height: 1.5;
   font-weight: 400;
 
@@ -29,8 +29,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-image: url('./assets/bg.jpg');
+  background: #000;
+  background-image: url('./assets/dark-background.png');
   background-size: cover;
+  border: 1px solid #000;
 }
 
 h1 {

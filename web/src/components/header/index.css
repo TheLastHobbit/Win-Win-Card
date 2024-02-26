@@ -8,6 +8,10 @@
   padding-left: 140px;
   box-shadow: 0 2px 4px rgba(237, 227, 227, 0.2);
   color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
 }
 
 
@@ -30,5 +34,4 @@
   font-size: 20px;
   margin-left: 32px;
   color: #fff;
-  text-decoration: underline;
 }

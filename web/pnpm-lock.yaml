@@ -26,6 +26,9 @@ dependencies:
   '@tanstack/react-query':
     specifier: ^5.20.5
     version: 5.20.5(react@18.2.0)
+  animate.css:
+    specifier: ^4.1.1
+    version: 4.1.1
   antd:
     specifier: ^5.14.1
     version: 5.14.1(react-dom@18.2.0)(react@18.2.0)
@@ -35,9 +38,15 @@ dependencies:
   react:
     specifier: ^18.2.0
     version: 18.2.0
+  react-card-carousel:
+    specifier: ^1.1.3
+    version: 1.1.3(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
   react-dom:
     specifier: ^18.2.0
     version: 18.2.0(react@18.2.0)
+  react-in-viewport:
+    specifier: 1.0.0-alpha.30
+    version: 1.0.0-alpha.30(react-dom@18.2.0)(react@18.2.0)
   react-router-dom:
     specifier: ^6.22.0
     version: 6.22.0(react-dom@18.2.0)(react@18.2.0)
@@ -5686,6 +5695,10 @@ packages:
       uri-js: 4.4.1
     dev: true
 
+  /animate.css@4.1.1:
+    resolution: {integrity: sha512-+mRmCTv6SbCmtYJCN4faJMNFVNN5EuCTTprDTAo7YzIGji2KADmakjVA3+8mVDkZ2Bf09vayB35lSQIex2+QaQ==}
+    dev: false
+
   /anser@1.4.10:
     resolution: {integrity: sha512-hCv9AqTQ8ycjpSd3upOJd7vFwW1JaoYQ7tpham03GJ1ca8/65rqn0RpaWpItOAd6ylW9wAw6luXYPJIyPFVOww==}
     dev: false
@@ -10958,6 +10971,18 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
+  /react-card-carousel@1.1.3(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-iG3ob0rAZMCrNtvkGvQgOPwfYQ9//R977Sk3/WHpSl9dKn/bkLiTQj/Iyfw5/oKZYL+vvGIvWwu776JFXnTC+A==}
+    peerDependencies:
+      prop-types: ^15.6.0
+      react: ^16.11.0
+      react-dom: ^16.11.0
+    dependencies:
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+    dev: false
+
   /react-copy-to-clipboard@5.1.0(react@18.2.0):
     resolution: {integrity: sha512-k61RsNgAayIJNoy9yDsYzDe/yAZAzEbEgcz3DZMhF686LEyukcE1hzurxe85JandPUG+yTfGVFzuEw3xt8WP/A==}
     peerDependencies:
@@ -11049,6 +11074,17 @@ packages:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       react-native: 0.73.4(@babel/core@7.23.9)(@babel/preset-env@7.23.9)(react@18.2.0)
+    dev: false
+
+  /react-in-viewport@1.0.0-alpha.30(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-fmjnsfWM+D739UKgQNY9E03Bjf+q9iTwMqwqXboThlfYZ7yLWXEGvTNsCPKwDYlrPinDX8/nZl4wAABsc5OH7w==}
+    peerDependencies:
+      react: ^16.8.3 || ^17.0.0 || ^18.0.0
+      react-dom: ^16.8.3 || ^17.0.0 || ^18.0.0
+    dependencies:
+      hoist-non-react-statics: 3.3.2
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
     dev: false
 
   /react-is@16.13.1:
