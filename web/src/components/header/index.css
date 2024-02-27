@@ -12,6 +12,7 @@
   top: 0;
   left: 0;
   right: 0;
+  z-index: 999;
 }
 
 
@@ -34,4 +35,17 @@
   font-size: 20px;
   margin-left: 32px;
   color: #fff;
+}
+
+
+.visible {
+  /* display: flex; */
+  top: 0;
+  transition: top 0.4s ease-out;
+}
+
+.hidden {
+  /* display: none; */
+  top: -80px;
+  transition: top 0.4s ease-out;
 }

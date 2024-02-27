@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom'
 import { Card, Space, Button } from 'antd';
 import './home.css';
-import Profile from 'components/profile';
 import { checkRegisteredMerchant } from '../../utils/Market'
 import { useEffect } from 'react';
 import { useAccount, useReadContracts, useSignTypedData } from 'wagmi'
@@ -20,7 +19,6 @@ const HomePage = () => {
 
   useEffect(() => {
     checkRegisteredMerchant(account).then((res) => {
-      console.log('checkRegisteredMerchant', checkRegisteredMerchant);
       setIsRegister(res)
     })
   }, [account])
@@ -38,6 +36,7 @@ const HomePage = () => {
   
   
   useEffect(() => {
+	const homeRefEl = homeRef.current
 	let observer = new IntersectionObserver((entries) => {
 		entries.forEach((entry) => {
 			if (entry.isIntersecting) {
@@ -46,9 +45,9 @@ const HomePage = () => {
 			}
 		});
 	});
-    observer.observe(homeRef.current)
+    observer.observe(homeRefEl)
     return () => {
-		observer.unobserve(homeRef.current)
+		observer.unobserve(homeRefEl)
     };
   }, [])
 

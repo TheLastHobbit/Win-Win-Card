@@ -1,0 +1,8 @@
+.particle-connect-wallet-btn {
+  background-color: transparent;
+  color: #fff;
+  border: 1px solid #fff;
+}
+.particle-connect-wallet-btn:hover {
+  opacity: 0.9;
+}
