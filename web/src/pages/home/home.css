@@ -13,10 +13,16 @@
   font-weight: bold;
   text-align: center;
   margin-top: 100px;
-  margin-bottom: 160px;
   color: #fff;
-  font-family: Courier, monospace;
+  font-family: monospace;
 }
+
+.sub-title {
+  color: #fff;
+  text-align: center;
+  margin-bottom: 120px;
+}
+
 .about-us {
   text-align: center;
   color: #999;

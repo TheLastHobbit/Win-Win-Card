@@ -15,6 +15,7 @@ const HomePage = () => {
   const { address: account  } = useAccount()
   const [animatelLeft, setAnimateLeft] = useState('')
   const [animatelRight, setAnimateRight] = useState('')
+  const [text, setText] = useState('')
   const homeRef = useRef('')
 
   useEffect(() => {
@@ -46,14 +47,33 @@ const HomePage = () => {
 		});
 	});
     observer.observe(homeRefEl)
+	// writeText('123456')
     return () => {
 		observer.unobserve(homeRefEl)
     };
   }, [])
 
+  useEffect(() => {
+	const writeText = async (content) => {
+		let index = 0
+		const id = setInterval(() => {
+			if (index <= content.length) {
+				setText(content.substr(0, index))
+				index += 1
+			} else {
+				clearInterval(id)
+			}
+		}, 80)
+	
+	}
+	writeText('Create your card, list it for sale, buy, and sell it.')
+  }, [])
+  
+
   return(
     <div className='home'>
-      <h1 className="animate__animated animate__zoomIn home-title">WIN-WIN Card System</h1>
+	<h1 className="animate__animated animate__zoomIn home-title">WIN-WIN Card System</h1>
+	<h2 className='animate__animated animate__zoomIn sub-title'>{text}</h2>
       <Carousel></Carousel>
       <div className='home-content' ref={homeRef}>
         <img className={`animate__animated ${animatelLeft} lifashi`} src={lifashi}  />
